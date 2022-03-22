@@ -1233,7 +1233,7 @@ normalize_data <- function(data,method=c("median","density","vsn"),norm_to=NULL,
 #' @details Generate stacked barplots
 #' @return Plot.
 #' @export
-Barplotsstacked = function(Data,Name="",ylab="Y-axis",logy=F,main="Titel",col="lightblue",AvgLine=T,Legends=NA,Legendtitle="Legend",Legendpos = "topright",shownumbers=T,shownumbers_total=T,order_groups=F,group_names="",ylim=NULL,margins=c(12,4,4,9),inset=c(-0.3,0))
+Barplotsstacked <- function(Data,Name="",ylab="Y-axis",logy=F,main="Titel",col="lightblue",AvgLine=T,Legends=NA,Legendtitle="Legend",Legendpos = "topright",shownumbers=T,shownumbers_total=T,order_groups=F,group_names="",ylim=NULL,margins=c(12,4,4,9),inset=c(-0.3,0))
 {
   orig_par <- graphics::par()
   curdata <- as.matrix(Data)
@@ -1390,7 +1390,7 @@ Barplotsstacked = function(Data,Name="",ylab="Y-axis",logy=F,main="Titel",col="l
 #' @details Generate side-by-side barplots
 #' @return Plot.
 #' @export
-BarplotsSBS = function(Data,ErrbarData=NA,Name="",ylab="Y-axis",main="Titel",col="lightblue",AvgLine=T,Legends=NA,Legendtitle="Legend",Legendpos = "topright",ylim=NA,logy=F,shownumbers=F,shownumbers_digits=1,separation=T,horiz_line=NULL,margins=c(8,4,4,4),inset=c(-0.1,0))
+BarplotsSBS <- function(Data,ErrbarData=NA,Name="",ylab="Y-axis",main="Titel",col="lightblue",AvgLine=T,Legends=NA,Legendtitle="Legend",Legendpos = "topright",ylim=NA,logy=F,shownumbers=F,shownumbers_digits=1,separation=T,horiz_line=NULL,margins=c(8,4,4,4),inset=c(-0.1,0))
 {
   orig_par <- graphics::par()
   curdata <- as.matrix(Data)
@@ -1496,7 +1496,7 @@ BarplotsSBS = function(Data,ErrbarData=NA,Name="",ylab="Y-axis",main="Titel",col
 #' @details Generate barplots
 #' @return Plot.
 #' @export
-Barplots = function(Data,ErrbarData=NA,Name="",xlab="X-axis",ylab="Y-axis",main="Titel",col="lightblue",AvgLine=T,digits_average=0,Legends=NA,Legendscol=NA,Legendtitle="Legend",Legendpos = "topright",shownumbers=T,shownumbers_digits=1,ylim=NA,logy=F,margins=c(10.1,4.1,4.1,4.1),inset=c(-0.1,0))
+Barplots <- function(Data,ErrbarData=NA,Name="",xlab="X-axis",ylab="Y-axis",main="Titel",col="lightblue",AvgLine=T,digits_average=0,Legends=NA,Legendscol=NA,Legendtitle="Legend",Legendpos = "topright",shownumbers=T,shownumbers_digits=1,ylim=NA,logy=F,margins=c(10.1,4.1,4.1,4.1),inset=c(-0.1,0))
 {
   #orig_par <- graphics::par()
   curdata <- as.numeric(Data)
@@ -1573,7 +1573,7 @@ Barplots = function(Data,ErrbarData=NA,Name="",xlab="X-axis",ylab="Y-axis",main=
 #' @details Plot density plots for data.frame with columns = samples and rows = observations
 #' @return Plot.
 #' @export
-densityplots = function(datafcs,names=NA,col=NA,main="",xlab="",xlim=NA,lwd=2)
+densityplots <- function(datafcs,names=NA,col=NA,main="",xlab="",xlim=NA,lwd=2)
 {
   #default_par <- graphics::par() #save par
   graphics::par(mar=c(5.1, 4.1, 4.1, 6.1))
@@ -1788,155 +1788,172 @@ PECA_analysis <- function(peptide_data,peptide_data_quant_significance=NULL,ids,
 }
 
 #' Perform differential expression analysis using LIMMA
-#' @param data Table of protein quantifications with samples in columns and features in rows.
-#' @param assignments Character vector of annotations of grouping per sample. By default set to NULL. In this case an ordinary one-sample test is performed.
+#' @param data Table of protein quantifications with samples in columns and
+#' features in rows.
+#' @param assignments Character vector of annotations of grouping per sample. By
+#' default set to NULL. In this case an ordinary one-sample test is performed.
 #' @param batch Optional character vector specifying sample batches.
-#' @param tech_reps Optional character vector specifying if samples are technical replicates
-#' @param contrast String of format Group1_vs_Group2 specifying contrast of interest. Replace Group1 and Group2 by groups specified in assignments.
+#' @param tech_reps Optional character vector specifying if samples are
+#' technical replicates
+#' @param contrast String of format Group1_vs_Group2 specifying contrast of
+#' interest. Replace Group1 and Group2 by groups specified in assignments.
 #' @details Perform differential expression analysis using R-package LIMMA.
-#' @return Returns a matrix which rows correspond to the proteins under analysis and columns indicate the corresponding abundance ratio, t-statistic, p-value and FDR adjusted p-value.
+#' @return Returns a matrix which rows correspond to the proteins under analysis
+#' and columns indicate the corresponding abundance ratio, t-statistic, p-value
+#' and FDR adjusted p-value.
 #' @export
-LIMMA_analysis <- function(data,assignments=NULL,batch=NULL,tech_reps=NULL,contrast=NULL)
-{
-  #library(limma)
-  #library(tibble)
-  #library(matrixStats)
-
-  if(!is.null(assignments))
-  {
-    if(length(unique(assignments))>2 & is.null(contrast))
-    {
-      stop("Please specify a contrast.")
-    }
-    if(!is.null(contrast))
-    {
-      assignments <- as.character(assignments)
-      contrasts <- stringr::str_split(contrast,"_vs_",simplify = T)
-      assignments[assignments==contrasts[2]] <- "a" ###Group2 to which Group1 should be compared
-      assignments[assignments==contrasts[1]] <- "b" ###Group1
-      ###now change all other groups to c,d...if neccesarry
-      if(length(which(unique(assignments) %not in% c("a","b"))) > 0)
-      {
-        groups <- unique(assignments)[which(unique(assignments) %not in% c("a","b"))]
-        for(g in groups)
-        {
-          assignments[assignments==g] <- base::paste("others",which(groups==g),sep="_")
+LIMMA_analysis <- function(data, assignments=NULL, batch=NULL, tech_reps=NULL,
+                           contrast=NULL){
+    if(!is.null(assignments)){
+        if(length(unique(assignments)) > 2 & is.null(contrast)){
+            stop("Please specify a contrast.")
         }
-      }
-    }
 
-    assignments <- base::as.data.frame(assignments)
-    if(names(assignments) != "Group"){names(assignments) <- "Group"}
+        if(!is.null(contrast)){
+            assignments <- as.character(assignments)
+            contrasts <- stringr::str_split(contrast, "_vs_", simplify=TRUE)
+            # Group2 to which Group1 should be compared
+            assignments[assignments == contrasts[2]] <- "a"
+            # Group1
+            assignments[assignments == contrasts[1]] <- "b"
 
-    data <- data[,order(assignments$Group)]
-    batch <- batch[order(assignments$Group)]
-    assignments <- assignments[order(assignments$Group),,drop=F]
+            # Now change all other groups to c,d...if neccesarry
+            if(length(which(unique(assignments) %not in% c("a", "b"))) > 0){
+                use_asg <- which(unique(assignments) %not in% c("a", "b"))
+                groups <- unique(assignments)[use_asg]
 
-    if(!is.null(batch) & length(unique(batch))>1)
-    {
-      assignments$batch <- batch
-      mm <- stats::model.matrix(~factor(Group) + factor(batch), assignments)
-    }else
-    {
-      mm <- stats::model.matrix(~factor(Group), assignments)
-    }
-    if(is.null(tech_reps))
-    {
-      fit <- limma::lmFit( data, mm)
-    }else
-    {
-      dc <- limma::duplicateCorrelation(data, design=mm,block=tech_reps)
-      fit <- limma::lmFit( data, mm,block=tech_reps, correlation=dc$consensus)
-    }
-
-    res <- limma::topTable(limma::eBayes(fit), coef = 2, number = Inf)#length(unique(assignments$Group))
-
-    if(is.null(contrast))
-    {
-      if(length(unique(assignments$Group)) == 2)
-      {
-        colnames(res)[1] <- "logFC"
-        if(any(unique(assignments$Group) != unique(assignments$Group)[order(unique(assignments$Group))]))###wrong order, invert
-        {
-          res$logFC <- -1*res$logFC
+                for(g in groups){
+                    use_grp <- which(groups == g)
+                    assignments[assignments == g] <- base::paste("others",
+                                                                 use_grp,
+                                                                 sep="_")
+                }
+            }
         }
-      }
-      ###add median standard deviation column per gene and condition
-      sds <- NULL
-      for(c in unique(assignments$Group))
-      {
-        sds <- cbind(sds,matrixStats::rowSds(as.matrix(data[,which(assignments$Group == c)]),na.rm=T))
-      }
-      rownames(sds) <- rownames(data)
-      sds <- sds[match(rownames(res),rownames(sds)),]
-      res$median_sd <- matrixStats::rowMedians(sds,na.rm=T)
 
-      ###Add number of valid data points per group
-      n_data_points <- NULL
-      for(c in unique(assignments$Group))
-      {
-        n_data_points <- cbind(n_data_points,rowSums(!is.na(data[,which(assignments$Group == c)])))
-      }
-      n_data_points <- base::as.data.frame(n_data_points)
-      colnames(n_data_points) <- base::paste("n_data_points_",unique(assignments$Group),sep="")
-      rownames(n_data_points) <- rownames(data)
-      n_data_points <- n_data_points[match(rownames(res),rownames(n_data_points)),]
+        assignments <- base::as.data.frame(assignments)
 
-      res <- cbind(res,n_data_points)
-    }else
-    {
-      ###add median standard deviation column per gene and condition
-      sds <- NULL
-      for(c in unique(assignments$Group)[1:2])
-      {
-        sds <- cbind(sds,matrixStats::rowSds(as.matrix(data[,which(assignments$Group == c)]),na.rm=T))
-      }
-      rownames(sds) <- rownames(data)
-      sds <- sds[match(rownames(res),rownames(sds)),]
-      res$median_sd <- matrixStats::rowMedians(sds,na.rm=T)
+        if(names(assignments) != "Group"){
+            names(assignments) <- "Group"
+        }
 
-      ###Add number of valid data points per group
-      n_data_points <- NULL
-      for(c in unique(assignments$Group)[1:2])
-      {
-        n_data_points <- cbind(n_data_points,rowSums(!is.na(data[,which(assignments$Group == c)])))
-      }
-      n_data_points <- base::as.data.frame(n_data_points)
-      colnames(n_data_points)[1] <- base::paste("n_data_points_",contrasts[2],sep="")
-      colnames(n_data_points)[2] <- base::paste("n_data_points_",contrasts[1],sep="")
+        data <- data[, order(assignments$Group)]
+        batch <- batch[order(assignments$Group)]
+        assignments <- assignments[order(assignments$Group), , drop=FALSE]
 
-      rownames(n_data_points) <- rownames(data)
-      n_data_points <- n_data_points[match(rownames(res),rownames(n_data_points)),]
+        if(!is.null(batch) & length(unique(batch)) > 1){
+            assignments$batch <- batch
+            mm <- stats::model.matrix(~factor(Group) + factor(batch),
+                                      assignments)
+        }
 
-      res <- cbind(res,n_data_points)
+        else{
+            mm <- stats::model.matrix(~factor(Group), assignments)
+        }
+
+        if(is.null(tech_reps)){
+            fit <- limma::lmFit(data, mm)
+        }
+
+        else{
+            dc <- limma::duplicateCorrelation(data, design=mm, block=tech_reps)
+            fit <- limma::lmFit(data, mm, block=tech_reps,
+                                correlation=dc$consensus)
+        }
+
+        res <- limma::topTable(limma::eBayes(fit), coef=2, number=Inf)
+        uniques <- unique(assignments$Group)
+
+        if(is.null(contrast)){
+            if(length(uniques) == 2){
+                colnames(res)[1] <- "logFC"
+
+                if(any(uniques != uniques[order(uniques)])){
+                    res$logFC <- -1 * res$logFC
+                }
+            }
+
+            # Add median standard deviation column per gene and condition
+            sds <- NULL
+
+            for(c in uniques){
+                mat <- as.matrix(data[, which(assignments$Group == c)])
+                sds <- cbind(sds,
+                             matrixStats::rowSds(mat, na.rm=TRUE))
+            }
+            rownames(sds) <- rownames(data)
+            sds <- sds[match(rownames(res), rownames(sds)), ]
+            res$median_sd <- matrixStats::rowMedians(sds, na.rm=TRUE)
+
+            # Add number of valid data points per group
+            n_data_points <- NULL
+            for(c in uniques){
+                use_grp <- which(assignments$Group == c)
+                n_data_points <- cbind(n_data_points,
+                                       rowSums(!is.na(data[, use_grp])))
+            }
+
+            n_data_points <- base::as.data.frame(n_data_points)
+            colnames(n_data_points) <- base::paste("n_data_points_", uniques,
+                                                   sep="")
+            rownames(n_data_points) <- rownames(data)
+            n_data_points <- n_data_points[match(rownames(res),
+                                                 rownames(n_data_points)), ]
+            res <- cbind(res, n_data_points)
+        }
+
+        else{
+            # Add median standard deviation column per gene and condition
+            sds <- NULL
+            for(c in uniques[1:2]){
+                mat <- as.matrix(data[, which(assignments$Group == c)])
+                sds <- cbind(sds, matrixStats::rowSds(mat, na.rm=TRUE))
+            }
+
+            rownames(sds) <- rownames(data)
+            sds <- sds[match(rownames(res), rownames(sds)), ]
+            res$median_sd <- matrixStats::rowMedians(sds, na.rm=TRUE)
+
+            # Add number of valid data points per group
+            n_data_points <- NULL
+
+            for(c in uniques[1:2]){
+                use_data <- data[, which(assignments$Group == c)]
+                n_data_points <- cbind(n_data_points, rowSums(!is.na(use_data)))
+            }
+
+            n_data_points <- base::as.data.frame(n_data_points)
+            colnames(n_data_points)[1] <- base::paste("n_data_points_",
+                                                      contrasts[2], sep="")
+            colnames(n_data_points)[2] <- base::paste("n_data_points_",
+                                                      contrasts[1], sep="")
+            rownames(n_data_points) <- rownames(data)
+            n_data_points <- n_data_points[match(rownames(res),
+                                                 rownames(n_data_points)), ]
+            res <- cbind(res, n_data_points)
+        }
     }
 
-  }else
-  {
-    if(!is.null(batch))
-    {
-      assignments <- base::data.frame(batch=batch)
-      mm <- stats::model.matrix(~0 + factor(batch), assignments)
+    else{
+        if(!is.null(batch)){
+            assignments <- base::data.frame(batch=batch)
+            mm <- stats::model.matrix(~0 + factor(batch), assignments)
+            fit <- limma::lmFit(data, mm)
+        }
 
-      fit <- limma::lmFit( data, mm)
+        else{
+          fit <- limma::lmFit(data)
+        }
 
-    }else
-    {
-      fit <- limma::lmFit(data)
+        res <- limma::topTable(limma::eBayes(fit), coef=1, number=Inf)
+        # Add median standard deviation column per gene and condition
+        use_loc <- match(rownames(res), rownames(data))
+        res$median_sd <- matrixStats::rowSds(as.matrix(data[use_loc, ]),
+                                             na.rm=TRUE)
+        # Add number of data points
+        res$n_data_points <- rowSums(!is.na(data))[match(rownames(res),
+                                                         rownames(data))]
     }
 
-    res <- limma::topTable(limma::eBayes(fit), coef = 1, number = Inf)
-    ###add median standard deviation column per gene and condition
-    res$median_sd <- matrixStats::rowSds(as.matrix(data[match(rownames(res),rownames(data)),]),na.rm=T)
-
-    ###add number of data points
-    res$n_data_points <- rowSums(!is.na(data))[match(rownames(res),rownames(data))]
-
-  }
-
-  return(res)
+    return(res)
 }
-
-
-
-
