@@ -1731,60 +1731,76 @@ Heatmap <- function(data,annotation,annotation_name="Anno",main="Heatmap",colors
 
 }
 
-#' Perform differential expression analysis using peptide-level expression-change averaging
-#' @param peptide_data Table of peptide quantifications with samples in columns and features in rows.
-#' @param peptide_data_quant_significance Optional: Ion accumulation significances with samples in columns and features in rows., By default not required and set to NULL.
-#' @param ids character vector of same length as rows in peptide_data indicating to which protein ID the corresponding peptide belongs to.
+#' Perform differential expression analysis using peptide-level expression
+#' change averaging
+#' @param peptide_data Table of peptide quantifications with samples in columns
+#' and features in rows.
+#' @param peptide_data_quant_significance Optional: Ion accumulation
+#' significances with samples in columns and features in rows., By default not
+#' required and set to NULL.
+#' @param ids character vector of same length as rows in peptide_data indicating
+#' to which protein ID the corresponding peptide belongs to.
 #' @param anno Annotation of grouping per sample
 #' @param group1_name Name of group1 in annotation
 #' @param group2_name Name of group1 in annotation
-#' @param TopN_ratio Number of top abundant peptides on which at maximum protein ratios should be estimated. By default set to 5.
+#' @param TopN_ratio Number of top abundant peptides on which at maximum protein
+#' ratios should be estimated. By default set to 5.
 #' @param pvalue_cutoff Optional: Ion accumulation significance cutoff.
-#' @param test A character string indicating whether the ordinary t-test ("t"), modified t-test ("modt"), or reproducibility-optimized test statistic ("rots") is performed.
-#' @details Perform differential expression analysis using the function PECA_df() from the R-package PECA.
-#' @return Returns a matrix which rows correspond to the genes under analysis and columns indicate the corresponding abundance ratio, t-statistic, p-value and FDR adjusted p-value
+#' @param test A character string indicating whether the ordinary t-test ("t"),
+#' modified t-test ("modt"), or reproducibility-optimized test statistic
+#' ("rots") is performed.
+#' @details Perform differential expression analysis using the function
+#' PECA_df() from the R-package PECA.
+#' @return Returns a matrix which rows correspond to the genes under analysis
+#' and columns indicate the corresponding abundance ratio, t-statistic, p-value
+#' and FDR adjusted p-value
 #' @export
-PECA_analysis <- function(peptide_data,peptide_data_quant_significance=NULL,ids,anno=NULL,group1_name,group2_name,TopN_ratio=5,pvalue_cutoff=NA,test=c("t","modt","rots"))
-{
-  #library(PECA)
-  #library(matrixStats)
-  test <- test[1]
-  colnames(peptide_data) <- base::gsub("^X","",colnames(peptide_data))
-  #get names of samples in groups to be compared
-  group_1 <- colnames(peptide_data)[which(anno == group1_name)]
-  group_2 <- colnames(peptide_data)[which(anno == group2_name)]
-  #max_pvalue per feature under investigation
-  if(!is.na(pvalue_cutoff))
-  {
-    max_pval <- matrixStats::rowMaxs(as.matrix(peptide_data_quant_significance[,append(group_1,group_2)]),na.rm=T)
-    peptide_data <- peptide_data[which(max_pval < pvalue_cutoff),]
-    ids <- ids[which(max_pval < pvalue_cutoff)]
-  }
-
-  peptide_data <- base::data.frame(id=ids,2^peptide_data)
-  colnames(peptide_data) <- base::gsub("^X","",colnames(peptide_data))
-
-  DE_results <- PECA::PECA_df(df = peptide_data,id="id",samplenames1 = group_1,samplenames2 = group_2,test = test,progress = F)
-  colnames(DE_results)[c(1,5,6)] <- c("logFC","P.Value","adj.P.Val")
-
-  #calculate ratio based on TopN abundant peptides per protein
-  if(!is.na(TopN_ratio))
-  {
-    peptide_data <- base::log2(peptide_data[,-1])
-    for(i in 1:nrow(DE_results))
-    {
-      temp_quants <- peptide_data[which(ids == rownames(DE_results)[i]),]
-      if(nrow(temp_quants)>TopN_ratio)
-      {
-        temp_quants <- temp_quants[order(rowSums(temp_quants,na.rm = T),decreasing = T)[1:TopN_ratio],]
-        ratio <- stats::median(rowMeans(temp_quants[,which(anno == group1_name)],na.rm=T)-rowMeans(temp_quants[,which(anno == group2_name)],na.rm=T),na.rm=T)
-        data.table::set(DE_results,as.integer(i),1L,ratio)
-      }
+PECA_analysis <- function(peptide_data, peptide_data_quant_significance=NULL,
+                          ids, anno=NULL, group1_name, group2_name,
+                          TopN_ratio=5, pvalue_cutoff=NA,
+                          test=c("t", "modt", "rots")){
+    test <- test[1]
+    colnames(peptide_data) <- base::gsub("^X", "", colnames(peptide_data))
+    # Get names of samples in groups to be compared
+    group_1 <- colnames(peptide_data)[which(anno == group1_name)]
+    group_2 <- colnames(peptide_data)[which(anno == group2_name)]
+    # Max_pvalue per feature under investigation
+    if(!is.na(pvalue_cutoff)){
+        use_mat <- as.matrix(peptide_data_quant_significance[, append(group_1,
+                                                                      group_2)])
+        max_pval <- matrixStats::rowMaxs(use_mat, na.rm=TRUE)
+        peptide_data <- peptide_data[which(max_pval < pvalue_cutoff), ]
+        ids <- ids[which(max_pval < pvalue_cutoff)]
     }
-  }
 
+    peptide_data <- base::data.frame(id=ids, 2^peptide_data)
+    colnames(peptide_data) <- base::gsub("^X", "", colnames(peptide_data))
 
-  return(DE_results)
+    DE_results <- PECA::PECA_df(df=peptide_data, id="id", samplenames1=group_1,
+                                samplenames2=group_2, test=test, progress=FALSE)
+    colnames(DE_results)[c(1, 5, 6)] <- c("logFC", "P.Value", "adj.P.Val")
+
+    # Calculate ratio based on TopN abundant peptides per protein
+    if(!is.na(TopN_ratio)){
+        peptide_data <- base::log2(peptide_data[, -1])
+
+        for(i in 1:nrow(DE_results)){
+            temp_quants <- peptide_data[which(ids == rownames(DE_results)[i]), ]
+
+            if(nrow(temp_quants) > TopN_ratio){
+                ord <- order(rowSums(temp_quants, na.rm=TRUE), decreasing=TRUE)
+                temp_quants <- temp_quants[ord[1:TopN_ratio], ]
+                g1 <- rowMeans(temp_quants[, which(anno == group1_name)],
+                               na.rm=TRUE)
+                g2 <- rowMeans(temp_quants[, which(anno == group2_name)],
+                               na.rm=TRUE)
+                ratio <- stats::median(g1 - g2, na.rm=TRUE)
+                data.table::set(DE_results, as.integer(i), 1L, ratio)
+            }
+        }
+    }
+
+    return(DE_results)
 }
 
 #' Perform differential expression analysis using LIMMA
