@@ -1652,83 +1652,104 @@ densityplots <- function(datafcs,names=NA,col=NA,main="",xlab="",xlim=NA,lwd=2)
 #' @details Heatmap visualization of data
 #' @return Plot.
 #' @export
-Heatmap <- function(data,annotation,annotation_name="Anno",main="Heatmap",colors_annotation,colors_plot=NA,color_breaks=NA,hclust_col=T,hclust_row=T,show_rownames=T,show_colnames=F,fontsize_rows=10,interactive=F,row_labels=NULL)
-{
-  #library(gplots)
-  #library(pheatmap)
-  #library(heatmaply)
-
-  if(any(is.na(colors_plot)))
-  {
-    colors_plot <- gplots::bluered(100)
-  }else
-  {
-    if(length(colors_plot) == 2)
-    {
-      colors_plot <- gplots::colorpanel(100,colors_plot[1],colors_plot[2])
-    }
-    if(length(colors_plot) == 2)
-    {
-      colors_plot <- gplots::colorpanel(100,colors_plot[1],colors_plot[2],colors_plot[3])
-    }
-  }
-
-  if(is.null(row_labels)) row_labels <- rownames(data)
-
-  if(interactive == F)
-  {
-    if(!is.data.frame(annotation))
-    {
-      annotation_col = base::data.frame(class=annotation)
-      rownames(annotation_col) <- colnames(data)
-      ann_colors = list(class = colors_annotation)
-      colnames(annotation_col) <- annotation_name
-      names(ann_colors) <- annotation_name
-    }else
-    {
-      annotation_col = annotation
-      rownames(annotation_col) <- colnames(data)
-      ann_colors = colors_annotation
-      colnames(annotation_col) <- colnames(annotation_col)
-      if(length(annotation_name) == ncol(annotation_col))
-      {
-        colnames(annotation_col) <- annotation_name
-        names(ann_colors) <- annotation_name
-      }
-
+Heatmap <- function(data,annotation, annotation_name="Anno", main="Heatmap",
+                    colors_annotation, colors_plot=NA, color_breaks=NA,
+                    hclust_col=TRUE, hclust_row=TRUE, show_rownames=TRUE,
+                    show_colnames=FALSE, fontsize_rows=10, interactive=FALSE,
+                    row_labels=NULL){
+    if(any(is.na(colors_plot))){
+        colors_plot <- gplots::bluered(100)
     }
 
-    if(any(!is.na(color_breaks)))
-    {
-      color_breaks <- seq(from=color_breaks[1],to = color_breaks[2],length.out = length(colors_plot))
-      pheatmap::pheatmap(mat = data,color = colors_plot,breaks = color_breaks,annotation_col = annotation_col,annotation_colors=ann_colors,main=main,show_colnames = show_colnames,show_rownames = show_rownames,fontsize_row = fontsize_rows,cluster_rows = hclust_row,cluster_cols = hclust_col,border_color=NA,labels_row=row_labels)
-    }else
-    {
-      max <- max(abs(data),na.rm=T)
-      color_breaks = seq(from=-max,to = max,length.out = length(colors_plot))
+    else{
+        if(length(colors_plot) == 2){
+            colors_plot <- gplots::colorpanel(100, colors_plot[1],
+                                              colors_plot[2])
+        }
 
-      pheatmap::pheatmap(mat = data,color = colors_plot,annotation_col = annotation_col,breaks = color_breaks,annotation_colors=ann_colors,main=main,show_colnames = show_colnames,show_rownames = show_rownames,fontsize_row = fontsize_rows,cluster_rows = hclust_row,cluster_cols = hclust_col,border_color=NA,labels_row=row_labels)
+        if(length(colors_plot) == 3){
+            colors_plot <- gplots::colorpanel(100, colors_plot[1],
+                                              colors_plot[2], colors_plot[3])
+        }
     }
-  }
-  if(interactive == T)
-  {
-    #library(plotly)
 
-    if(any(!is.na(color_breaks)))
-    {
-      data[data < color_breaks[1]] <- color_breaks[1]
-      data[data > color_breaks[2]] <- color_breaks[2]
-
-      heatmaply::heatmaply(as.matrix(data),col = colors_plot,col_side_colors = annotation,col_side_palette = colors_annotation,main=main,showticklabels = c(show_colnames,show_rownames),Rowv = hclust_row,Colv = hclust_col,labRow = row_labels)
-    }else
-    {
-      max <- max(abs(data),na.rm=T)
-      color_breaks <- c(-max,max)
-
-      heatmaply::heatmaply(as.matrix(data),col = colors_plot,limits = color_breaks,col_side_colors = annotation,col_side_palette = colors_annotation,main=main,showticklabels = c(show_colnames,show_rownames),Rowv = hclust_row,Colv = hclust_col,labRow = row_labels)
+    if(is.null(row_labels)){
+        row_labels <- rownames(data)
     }
-  }
 
+    if(interactive == FALSE){
+        if(!is.data.frame(annotation)){
+            annotation_col <- base::data.frame(class=annotation)
+            rownames(annotation_col) <- colnames(data)
+            ann_colors <- list(class=colors_annotation)
+            colnames(annotation_col) <- annotation_name
+            names(ann_colors) <- annotation_name
+        }
+        else{
+            annotation_col <- annotation
+            rownames(annotation_col) <- colnames(data)
+            ann_colors <- colors_annotation
+            colnames(annotation_col) <- colnames(annotation_col)
+
+            if(length(annotation_name) == ncol(annotation_col)){
+                colnames(annotation_col) <- annotation_name
+                names(ann_colors) <- annotation_name
+            }
+        }
+
+        if(any(!is.na(color_breaks))){
+            color_breaks <- seq(from=color_breaks[1], to=color_breaks[2],
+                                length.out=length(colors_plot))
+            pheatmap::pheatmap(mat=data, color=colors_plot, breaks=color_breaks,
+                               annotation_col=annotation_col,
+                               annotation_colors=ann_colors, main=main,
+                               show_colnames=show_colnames,
+                               show_rownames=show_rownames,
+                               fontsize_row=fontsize_rows,
+                               cluster_rows=hclust_row, cluster_cols=hclust_col,
+                               border_color=NA, labels_row=row_labels)
+        }
+
+        else{
+            max <- max(abs(data), na.rm=TRUE)
+            color_breaks <- seq(from=-max, to=max,
+                                length.out=length(colors_plot))
+            pheatmap::pheatmap(mat=data, color=colors_plot,
+                               annotation_col=annotation_col,
+                               breaks=color_breaks,
+                               annotation_colors=ann_colors, main=main,
+                               show_colnames=show_colnames,
+                               show_rownames=show_rownames,
+                               fontsize_row=fontsize_rows,
+                               cluster_rows=hclust_row, cluster_cols=hclust_col,
+                               border_color=NA, labels_row=row_labels)
+        }
+    }
+
+    if(interactive == TRUE){
+        if(any(!is.na(color_breaks))){
+            data[data < color_breaks[1]] <- color_breaks[1]
+            data[data > color_breaks[2]] <- color_breaks[2]
+            heatmaply::heatmaply(as.matrix(data), col=colors_plot,
+                                 col_side_colors=annotation,
+                                 col_side_palette=colors_annotation, main=main,
+                                 showticklabels=c(show_colnames, show_rownames),
+                                 Rowv=hclust_row, Colv=hclust_col,
+                                 labRow=row_labels)
+        }
+
+        else{
+            max <- max(abs(data), na.rm=TRUE)
+            color_breaks <- c(-max, max)
+            heatmaply::heatmaply(as.matrix(data), col=colors_plot,
+                                 limits=color_breaks,
+                                 col_side_colors=annotation,
+                                 col_side_palette=colors_annotation, main=main,
+                                 showticklabels=c(show_colnames, show_rownames),
+                                 Rowv=hclust_row, Colv=hclust_col,
+                                 labRow=row_labels)
+        }
+    }
 }
 
 #' Perform differential expression analysis using peptide-level expression
