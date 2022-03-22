@@ -1570,68 +1570,82 @@ Barplots <- function(Data,ErrbarData=NA,Name="",xlab="X-axis",ylab="Y-axis",main
 #' @param xlab X-Axis label
 #' @param xlim X-axis limits
 #' @param lwd Line width
-#' @details Plot density plots for data.frame with columns = samples and rows = observations
+#' @details Plot density plots for data.frame with columns = samples and
+#' rows = observations
 #' @return Plot.
 #' @export
-densityplots <- function(datafcs,names=NA,col=NA,main="",xlab="",xlim=NA,lwd=2)
-{
-  #default_par <- graphics::par() #save par
-  graphics::par(mar=c(5.1, 4.1, 4.1, 6.1))
-  #####datafcs should contain only cols containg data for which density should be displayed
-  densitys <- list()
-  datafcs[sapply(datafcs, is.infinite)] <- NA
-  densmax <- 0
-  for(i in 1:ncol(datafcs))
-  {
-    if(!is.na(sum(unique(datafcs[,i]),na.rm=T)) & length(unique(datafcs[,i])) > 1 | length(unique(datafcs[,i])) == 1 & !is.na(unique(datafcs[,i])[1]))
-    {
-      densitys[[i]] <- stats::density(datafcs[,i],na.rm=T)
-      if(max(densitys[[i]]$y) > densmax & length(unique(datafcs[,i])) > 1) ### only if its not the reference
-      {
-        densmax <- max(densitys[[i]]$y)
-      }
-    }else
-    {
-      densitys[[i]] <- NA
-    }
+densityplots <- function(datafcs, names=NA, col=NA, main="", xlab="", xlim=NA,
+                         lwd=2){
+    graphics::par(mar=c(5.1, 4.1, 4.1, 6.1))
+    # datafcs should contain only cols containg data for which density should be
+    # displayed
+    densitys <- list()
+    datafcs[sapply(datafcs, is.infinite)] <- NA
+    densmax <- 0
 
-  }
-  if(is.na(col)){col <- randomcoloR::randomColor(ncol(datafcs))}
-  if(length(col) == 1){col <- rep(col,ncol(datafcs))}
-  counter = 0
-  for(i in 1:ncol(datafcs))
-  {
-    if(!is.na(densitys[[i]][3]))
-    {
-      counter <- counter + 1
-      if(counter == 1)
-      {
-        if(!is.na(xlim))
-        {
-          plot(densitys[[1]],xlim = xlim,ylim=c(0,densmax),main=main,xlab=xlab,col=col[i],lwd=lwd)
-        }else
-        {
-          plot(densitys[[1]],ylim=c(0,densmax),main=main,xlab=xlab,col=col[i],lwd=lwd)
+    for(i in 1:ncol(datafcs)){
+        cond1 <- !is.na(sum(unique(datafcs[, i]), na.rm=TRUE))
+        cond2 <- length(unique(datafcs[, i])) > 1
+        cond3 <- length(unique(datafcs[, i])) == 1
+        cond4 <- !is.na(unique(datafcs[, i])[1])
+
+        if(cond1 & cond2 | cond3 & cond4){
+            densitys[[i]] <- stats::density(datafcs[, i], na.rm=TRUE)
+            # Only if its not the reference
+            subcond1 <- max(densitys[[i]]$y) > densmax
+            subcond2 <- length(unique(datafcs[, i])) > 1
+
+            if(subcond1 & subcond2){
+                densmax <- max(densitys[[i]]$y)
+            }
         }
 
-      }else
-      {
-        graphics::lines(densitys[[i]],col=col[i],lwd=lwd)
-      }
-      x <- maxDensity(datafcs[,i])
-      graphics::segments(x0 = x,x1 = x, y0 = 0, y1 = max(densitys[[i]]$y),lty=2,col="grey")
+        else{
+            densitys[[i]] <- NA
+        }
     }
-  }
 
-  if(!is.na(names))
-  {
-    graphics::par(xpd=T)
-    graphics::par(font=2)
-    graphics::legend("topright",inset=c(-0.25,0), legend = names, fill = col,cex=0.8, title="Samples",ncol=1,text.font=1)
-    graphics::par(xpd=F)
-  }
-  #graphics::par(default_par)
-  #graphics::par(xpd=F)
+    if(is.na(col)){
+        col <- randomcoloR::randomColor(ncol(datafcs))
+    }
+
+    if(length(col) == 1){
+        col <- rep(col, ncol(datafcs))
+    }
+
+    counter <- 0
+    for(i in 1:ncol(datafcs)){
+        if(!is.na(densitys[[i]][3])){
+            counter <- counter + 1
+            if(counter == 1){
+                if(!is.na(xlim)){
+                    plot(densitys[[1]], xlim=xlim, ylim=c(0, densmax),
+                         main=main, xlab=xlab, col=col[i], lwd=lwd)
+                }
+
+                else{
+                    plot(densitys[[1]], ylim=c(0, densmax), main=main,
+                         xlab=xlab, col=col[i], lwd=lwd)
+                }
+            }
+
+            else{
+                graphics::lines(densitys[[i]], col=col[i], lwd=lwd)
+            }
+
+            x <- maxDensity(datafcs[, i])
+            graphics::segments(x0=x, x1=x, y0=0, y1=max(densitys[[i]]$y), lty=2,
+                               col="grey")
+        }
+    }
+
+    if(!is.na(names)){
+        graphics::par(xpd=TRUE)
+        graphics::par(font=2)
+        graphics::legend("topright", inset=c(-0.25, 0), legend=names, fill=col,
+                         cex=0.8, title="Samples", ncol=1, text.font=1)
+        graphics::par(xpd=FALSE)
+    }
 }
 
 #' Heatmap visualization of data
@@ -1652,7 +1666,7 @@ densityplots <- function(datafcs,names=NA,col=NA,main="",xlab="",xlim=NA,lwd=2)
 #' @details Heatmap visualization of data
 #' @return Plot.
 #' @export
-Heatmap <- function(data,annotation, annotation_name="Anno", main="Heatmap",
+Heatmap <- function(data, annotation, annotation_name="Anno", main="Heatmap",
                     colors_annotation, colors_plot=NA, color_breaks=NA,
                     hclust_col=TRUE, hclust_row=TRUE, show_rownames=TRUE,
                     show_colnames=FALSE, fontsize_rows=10, interactive=FALSE,
