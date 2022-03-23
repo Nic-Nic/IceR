@@ -1390,87 +1390,109 @@ Barplotsstacked <- function(Data,Name="",ylab="Y-axis",logy=F,main="Titel",col="
 #' @details Generate side-by-side barplots
 #' @return Plot.
 #' @export
-BarplotsSBS <- function(Data,ErrbarData=NA,Name="",ylab="Y-axis",main="Titel",col="lightblue",AvgLine=T,Legends=NA,Legendtitle="Legend",Legendpos = "topright",ylim=NA,logy=F,shownumbers=F,shownumbers_digits=1,separation=T,horiz_line=NULL,margins=c(8,4,4,4),inset=c(-0.1,0))
-{
-  orig_par <- graphics::par()
-  curdata <- as.matrix(Data)
+BarplotsSBS <- function(Data, ErrbarData=NA, Name="", ylab="Y-axis",
+                        main="Title", col="lightblue", AvgLine=TRUE, Legends=NA,
+                        Legendtitle="Legend", Legendpos="topright", ylim=NA,
+                        logy=FALSE, shownumbers=FALSE, shownumbers_digits=1,
+                        separation=TRUE, horiz_line=NULL, margins=c(8, 4, 4, 4),
+                        inset=c(-0.1, 0)){
+    orig_par <- graphics::par()
+    curdata <- as.matrix(Data)
 
-  if(any(is.na(Name))){
-    Name[is.na(Name)] <- ""
-  }
-
-  if(any(Name != ""))
-  {
-    names <- Name
-  }else
-  {
-    names <- colnames(Data)
-  }
-  graphics::par(mar=margins,xpd=F)
-  if(is.na(ylim))
-  {
-    if(logy == F)mids <- graphics::barplot(curdata,ylab=ylab,col=col,las=2,main=main,xaxt = "n",beside=T)
-    if(logy == T)mids <- graphics::barplot(curdata,ylab=ylab,col=col,las=2,main=main,xaxt = "n",beside=T,log="y")
-  }else
-  {
-    if(logy == F)mids <- graphics::barplot(curdata,ylab=ylab,col=col,las=2,main=main,xaxt = "n",beside=T,ylim = ylim)
-    if(logy == T)mids <- graphics::barplot(curdata,ylab=ylab,col=col,las=2,main=main,xaxt = "n",beside=T,ylim = ylim,log="y")
-  }
-
-  if(separation == T)
-  {
-    for(i in 1:ncol(mids)-1)
-    {
-      graphics::abline(v=mids[nrow(mids),i]+1,lty=2)
+    if(any(is.na(Name))){
+        Name[is.na(Name)] <- ""
     }
 
-  }
-
-  if(!is.na(ErrbarData))
-  {
-    for(i in 1:ncol(curdata))
-    {
-      Hmisc::errbar(mids[,i],curdata[,i], curdata[,i]+ErrbarData[,i], curdata[,i]-ErrbarData[,i], add=T, pch=26, cap=.01)
+    if(any(Name != "")){
+        names <- Name
     }
 
-  }
-
-  graphics::axis(1, at=colMeans(mids), labels=names, las=3,cex.axis=0.9)
-  if(AvgLine == T)
-  {
-    graphics::abline(h=mean(curdata,na.rm=T),lty=2)
-    graphics::par(xpd=T)
-    graphics::text(graphics::par("usr")[2]+1,mean(curdata,na.rm=T),round(mean(curdata,na.rm=T),digits=0))
-  }
-
-  if(!is.null(horiz_line))
-  {
-    graphics::par(xpd=F)
-    graphics::abline(h=horiz_line,lty=2)
-  }
-
-  if(!is.na(Legends))
-  {
-    graphics::par(xpd=T)
-    defaultpar <- graphics::par()
-    graphics::par(font=2)
-    graphics::legend(Legendpos,inset=inset, legend = Legends, fill = col,cex=0.8, title=Legendtitle,ncol=1,text.font=1)
-    graphics::par(defaultpar)
-  }
-  graphics::par(xpd=T)
-  if(shownumbers == T)
-  {
-    for(i in 1:length(curdata))
-    {
-      x <- mids[i]
-      ###plot label complete bar
-      y <- curdata[i]
-      graphics::text(x,y,labels = round(y,digits = shownumbers_digits),cex=0.7,pos=3,srt=90,offset = 1)
+    else{
+        names <- colnames(Data)
     }
-  }
-  graphics::par(xpd=F)
-  graphics::par(orig_par)
-  return(mids)
+
+    graphics::par(mar=margins, xpd=FALSE)
+
+    if(is.na(ylim)){
+        if(logy == FALSE){
+            mids <- graphics::barplot(curdata, ylab=ylab, col=col, las=2,
+                                      main=main, xaxt="n", beside=TRUE)
+        }
+
+        if(logy == TRUE){
+            mids <- graphics::barplot(curdata, ylab=ylab, col=col, las=2,
+                                      main=main, xaxt="n", beside=TRUE, log="y")
+        }
+    }
+
+    else{
+        if(logy == FALSE){
+            mids <- graphics::barplot(curdata, ylab=ylab, col=col, las=2,
+                                      main=main, xaxt="n", beside=TRUE,
+                                      ylim=ylim)
+        }
+
+        if(logy == TRUE){
+            mids <- graphics::barplot(curdata, ylab=ylab, col=col, las=2,
+                                      main=main, xaxt="n", beside=TRUE,
+                                      ylim=ylim, log="y")
+        }
+    }
+
+    if(separation == TRUE){
+        for(i in 1:ncol(mids) - 1){
+            graphics::abline(v=mids[nrow(mids), i] + 1, lty=2)
+        }
+    }
+
+    if(!is.na(ErrbarData)){
+        for(i in 1:ncol(curdata)){
+            Hmisc::errbar(mids[, i], curdata[, i],
+                          curdata[, i] + ErrbarData[, i],
+                          curdata[, i] - ErrbarData[, i],
+                          add=TRUE, pch=26, cap=0.01)
+        }
+    }
+
+    graphics::axis(1, at=colMeans(mids), labels=names, las=3, cex.axis=0.9)
+
+    if(AvgLine == TRUE){
+        graphics::abline(h=mean(curdata, na.rm=TRUE), lty=2)
+        graphics::par(xpd=TRUE)
+        graphics::text(graphics::par("usr")[2] + 1, mean(curdata, na.rm=TRUE),
+                       round(mean(curdata, na.rm=TRUE), digits=0))
+    }
+
+    if(!is.null(horiz_line)){
+        graphics::par(xpd=FALSE)
+        graphics::abline(h=horiz_line, lty=2)
+    }
+
+    if(!is.na(Legends)){
+        graphics::par(xpd=TRUE)
+        defaultpar <- graphics::par()
+        graphics::par(font=2)
+        graphics::legend(Legendpos, inset=inset, legend=Legends, fill=col,
+                         cex=0.8, title=Legendtitle, ncol=1, text.font=1)
+        graphics::par(defaultpar)
+    }
+
+    graphics::par(xpd=TRUE)
+
+    if(shownumbers == TRUE){
+        for(i in 1:length(curdata)){
+            x <- mids[i]
+            # Plot label complete bar
+            y <- curdata[i]
+            graphics::text(x, y, labels=round(y, digits=shownumbers_digits),
+                           cex=0.7, pos=3, srt=90, offset=1)
+        }
+    }
+
+    graphics::par(xpd=FALSE)
+    graphics::par(orig_par)
+
+    return(mids)
 }
 
 #' Generate barplots
