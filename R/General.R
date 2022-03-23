@@ -1233,139 +1233,151 @@ normalize_data <- function(data,method=c("median","density","vsn"),norm_to=NULL,
 #' @details Generate stacked barplots
 #' @return Plot.
 #' @export
-Barplotsstacked <- function(Data,Name="",ylab="Y-axis",logy=F,main="Titel",col="lightblue",AvgLine=T,Legends=NA,Legendtitle="Legend",Legendpos = "topright",shownumbers=T,shownumbers_total=T,order_groups=F,group_names="",ylim=NULL,margins=c(12,4,4,9),inset=c(-0.3,0))
-{
-  orig_par <- graphics::par()
-  curdata <- as.matrix(Data)
-  curdata[which(is.na(curdata))] <- 0
-  if(any(is.na(Name))){
-    Name[is.na(Name)] <- ""
-  }
+Barplotsstacked <- function(Data, Name="", ylab="Y-axis", logy=FALSE,
+                            main="Title", col="lightblue", AvgLine=TRUE,
+                            Legends=NA, Legendtitle="Legend",
+                            Legendpos="topright", shownumbers=TRUE,
+                            shownumbers_total=TRUE, order_groups=FALSE,
+                            group_names="", ylim=NULL, margins=c(12, 4, 4, 9),
+                            inset=c(-0.3, 0)){
+    orig_par <- graphics::par()
+    curdata <- as.matrix(Data)
+    curdata[which(is.na(curdata))] <- 0
 
-  if(any(Name != ""))
-  {
-    names <- Name
-  }else
-  {
-    names <- colnames(Data)
-  }
+    if(any(is.na(Name))){
+        Name[is.na(Name)] <- ""
+    }
 
-  ###order samples by groups
-  if(order_groups == T)
-  {
-    Data <- Data[,order(group_names)]
-  }
-  if(order_groups == T)
-  {
-    graphics::par(mar=margins,xpd=F)
-  }else
-  {
-    graphics::par(mar=margins,xpd=F)
-  }
-  if(is.null(ylim))
-  {
-    ymin <- ifelse(min(colSums(curdata,na.rm=T),na.rm=T) < 0,min(colSums(curdata,na.rm=T),na.rm=T) - (0.1*min(colSums(curdata,na.rm=T),na.rm=T)),0)
-    ymax <- ifelse(max(colSums(curdata,na.rm=T),na.rm=T) > 0,max(colSums(curdata,na.rm=T),na.rm=T) + (0.1*max(colSums(curdata,na.rm=T),na.rm=T)),0)
-  }else
-  {
-    ymin <- ifelse(ylim[1] < 0,ylim[1] - (0.1*ylim[1]),0)
-    ymax <- ifelse(ylim[2] > 0,ylim[2] + (0.1*ylim[2]),0)
-  }
+    if(any(Name != "")){
+        names <- Name
+    }
 
-  if(logy == T & ymin == 0 & ymax > 1)
-  {
-    ymin = 1
-  }else
-  {
-    logy = F
-  }
+    else{
+        names <- colnames(Data)
+    }
 
-  if(logy == F)mids <- graphics::barplot(curdata,ylab=ylab,col=col,las=2,main=main,xaxt = "n",ylim=c(ymin,ymax))
-  if(logy == T)mids <- graphics::barplot(curdata,ylab=ylab,col=col,las=2,main=main,xaxt = "n",ylim=c(ymin,ymax),log="y")
+    # Order samples by groups
+    if(order_groups == TRUE){
+        Data <- Data[, order(group_names)]
+    }
+
+    if(order_groups == TRUE){
+        graphics::par(mar=margins, xpd=FALSE)
+    }
+
+    else{
+        graphics::par(mar=margins, xpd=FALSE)
+    }
+
+    if(is.null(ylim)){
+        ymin <- ifelse(min(colSums(curdata, na.rm=TRUE), na.rm=TRUE) < 0,
+                       min(colSums(curdata, na.rm=TRUE), na.rm=TRUE)
+                       - (0.1 * min(colSums(curdata, na.rm=TRUE), na.rm=TRUE)),
+                       0)
+        ymax <- ifelse(max(colSums(curdata, na.rm=TRUE), na.rm=TRUE) > 0,
+                       max(colSums(curdata, na.rm=TRUE), na.rm=TRUE)
+                       + (0.1 * max(colSums(curdata, na.rm=TRUE), na.rm=TRUE)),
+                       0)
+    }
+
+    else{
+        ymin <- ifelse(ylim[1] < 0, ylim[1] - (0.1 * ylim[1]), 0)
+        ymax <- ifelse(ylim[2] > 0, ylim[2] + (0.1 * ylim[2]), 0)
+    }
+
+    if(logy == TRUE & ymin == 0 & ymax > 1){
+        ymin = 1
+    }
+
+    else{
+        logy = FALSE
+    }
+
+    if(logy == FALSE){
+        mids <- graphics::barplot(curdata, ylab=ylab, col=col, las=2, main=main,
+                                  xaxt="n", ylim=c(ymin, ymax))
+    }
+
+    if(logy == TRUE){
+        mids <- graphics::barplot(curdata, ylab=ylab, col=col, las=2, main=main,
+                                  xaxt="n", ylim=c(ymin, ymax), log="y")
+    }
 
 
-  graphics::axis(1, at=mids, labels=names, las=3,cex.axis=0.6)
-  if(AvgLine == T)
-  {
-    graphics::abline(h=mean(curdata,na.rm=T),lty=2)
-    graphics::par(xpd=T)
-    graphics::text(graphics::par("usr")[2]+1,mean(curdata,na.rm=T),round(mean(curdata,na.rm=T),digits=0))
-  }
+    graphics::axis(1, at=mids, labels=names, las=3, cex.axis=0.6)
 
-  if(!is.na(Legends))
-  {
-    graphics::par(xpd=T)
-    defaultpar <- graphics::par()
-    graphics::par(font=2)
-    graphics::legend(Legendpos,inset=inset, legend = Legends, fill = col,cex=0.8, title=Legendtitle,ncol=1,text.font=1)
-    graphics::par(defaultpar)
-    graphics::par(xpd=F)
-  }
+    if(AvgLine == TRUE){
+        graphics::abline(h=mean(curdata, na.rm=TRUE), lty=2)
+        graphics::par(xpd=TRUE)
+        graphics::text(graphics::par("usr")[2] + 1, mean(curdata, na.rm=TRUE),
+                       round(mean(curdata, na.rm=TRUE), digits=0))
+    }
 
-  if(shownumbers == T)
-  {
-    for(i in 1:ncol(curdata))
-    {
-      x <- mids[i]
-      for(j in 1:nrow(curdata))
-      {
-        if(abs(curdata[j,i]) >= 0.1*(ymax+ymin)) ###only add label if value >= 10% of yplot area otherwise bar too small
-        {
-          if(j == 1)
-          {
-            y <- 0 ###start y value
-          }else
-          {
-            y <- sum(curdata[1:j-1,i],na.rm=T)
-          }
-          y <- y + (curdata[j,i]/2)
-          graphics::text(x,y,labels = round(curdata[j,i],digits=1),cex=0.7)
+    if(!is.na(Legends)){
+        graphics::par(xpd=TRUE)
+        defaultpar <- graphics::par()
+        graphics::par(font=2)
+        graphics::legend(Legendpos, inset=inset, legend=Legends, fill=col,
+                         cex=0.8, title=Legendtitle, ncol=1, text.font=1)
+        graphics::par(defaultpar)
+        graphics::par(xpd=FALSE)
+    }
+
+    if(shownumbers == TRUE){
+        for(i in 1:ncol(curdata)){
+            x <- mids[i]
+            for(j in 1:nrow(curdata)){
+                 # Only add label if value >= 10% of yplot area otherwise bar
+                 # too small
+                if(abs(curdata[j, i]) >= 0.1 * (ymax + ymin)){
+                    if(j == 1){
+                        y <- 0 ###start y value
+                    }
+
+                    else{
+                        y <- sum(curdata[1:j - 1, i], na.rm=TRUE)
+                    }
+
+                    y <- y + (curdata[j, i] / 2)
+                    graphics::text(x, y, labels=round(curdata[j, i], digits=1),
+                                   cex=0.7)
+                }
+            }
         }
-      }
     }
-  }
 
-  if(shownumbers_total == T)
-  {
-    for(i in 1:ncol(curdata))
-    {
-      x <- mids[i]
-      ###plot label complete bar
-      y <- sum(curdata[1:nrow(curdata),i],na.rm=T)
-      graphics::text(x,y,labels = round(y,digits=1),cex=0.7,pos=3)
+    if(shownumbers_total == TRUE){
+        for(i in 1:ncol(curdata)){
+            x <- mids[i]
+            # Plot label complete bar
+            y <- sum(curdata[1:nrow(curdata), i], na.rm=TRUE)
+            graphics::text(x, y, labels=round(y, digits=1), cex=0.7, pos=3)
+        }
     }
-  }
 
+    # Order samples by groups trellis
+    if(order_groups == TRUE & logy == FALSE){
+        graphics::abline(h=graphics::par("usr")[4])
 
+        for(g in sort(unique(group_names))){
+            indices <- which(sort(group_names) == g)
 
-
-
-  ###order samples by groups trellis
-  if(order_groups == T & logy == F)
-  {
-    graphics::abline(h=graphics::par("usr")[4])
-    for(g in sort(unique(group_names)))
-    {
-      indices <- which(sort(group_names) == g)
-
-      if(min(indices) == 1)
-      {
-        graphics::abline(v=mids[min(indices)]-0.625)
-      }
-      graphics::abline(v=mids[max(indices)]+0.625)
-      graphics::par(xpd=T)
-      graphics::text(mean(c(mids[min(indices)],mids[max(indices)])),graphics::par("usr")[4]+(graphics::par("usr")[4]-graphics::par("usr")[3])*0.05,g)
-      graphics::par(xpd=F)
-
+            if(min(indices) == 1){
+                graphics::abline(v=mids[min(indices)] - 0.625)
+            }
+            graphics::abline(v=mids[max(indices)] + 0.625)
+            graphics::par(xpd=TRUE)
+            graphics::text(mean(c(mids[min(indices)], mids[max(indices)])),
+                           graphics::par("usr")[4]
+                           + (graphics::par("usr")[4] - graphics::par("usr")[3])
+                           * 0.05, g)
+            graphics::par(xpd=FALSE)
+        }
     }
-  }
 
+    graphics::par(orig_par)
 
-
-
-
-  graphics::par(orig_par)
-  return(mids)
+    return(mids)
 }
 
 #' Generate side-by-side barplots
