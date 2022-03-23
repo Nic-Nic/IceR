@@ -1012,154 +1012,209 @@ plot_accuracy <- function(list_of_data_lists,colors=c("darkgrey","chocolate3"),L
   #graphics::legend(Legendpos,inset=c(-0.12,0), legend = names(list_of_data_lists), fill = colors,cex=0.8,ncol=1,text.font=1,horiz=T,border = NA,bg="transparent",box.col = NA)
 }
 
-###Visualize data set on protein or peptide level in a heatmap
-###data_list = output from load_MaxQ_data or load_Requant_data
-###annotation = vector indicating how samples should be grouped or data frame with different annotations per cols and sampels in rows
-###colors_annotation = named vector of colors with names corresponding to annotation group names
-###subset_indices = integer vector indicating which rows of protein quant or peptide quant table should be plotted
-###used_quant should be norm or raw indicating of normalized or raw intensities should be plotted
-###quant_level should be protein or peptide. indicates if quant data on protein or peptide level should be plotted
-###breaks should be a numerical vector indicating min and max value between which the colors of the plotting are ranging
-###colors_plot should be a vector of 2 or 3 colors which should be used to color data in the range of breaks
-###row_order integer vector indicating in which order rows should be plotted
-visualize_dataset_heatmap <- function(data_list,annotation=NULL,colors_annotation=NULL,subset_rows=NULL,subset_columns=NULL,used_quant=c("norm","raw"),quant_level=c("protein","peptide"),breaks=NULL,colors_plot=c("deepskyblue","firebrick"),main="",annotation_name="Sample",row_order = NULL,show_rownames=F,rownames=NULL,remove_NA_rows=T,hclust_col=F,hclust_row=F)
-{
-  #library(grDevices)
-  used_quant <- used_quant[1]
-  quant_level <- quant_level[1]
-  ##Only plot a subset of features?
-  if(is.null(subset_rows) & quant_level == "protein")subset_rows <- 1:nrow(data_list$Protein_level$Quant_data)
-  if(is.null(subset_rows) & quant_level == "peptide")subset_rows <- 1:nrow(data_list$Peptide_level$Quant_data)
-
-  if(is.null(subset_columns) & quant_level == "protein")subset_columns <- 1:ncol(data_list$Protein_level$Quant_data)
-  if(is.null(subset_columns) & quant_level == "peptide")subset_columns <- 1:ncol(data_list$Peptide_level$Quant_data)
-
-  if(!is.data.frame(annotation))
-  {
-    annotation <- annotation[subset_columns]
-    annotation <- base::data.frame(anno=annotation)
-
-  }else
-  {
-    annotation <- annotation[subset_columns,]
-  }
-
-  ##which quantification data should be plotted, raw or normalized. Standard is normalized
-  if(used_quant == "norm" & quant_level == "protein")temp_dat <- data_list$Protein_level$Quant_data_norm[subset_rows,subset_columns]
-  if(used_quant == "raw" & quant_level == "protein")temp_dat <- data_list$Protein_level$Quant_data[subset_rows,subset_columns]
-
-  if(used_quant == "norm" & quant_level == "peptide")temp_dat <- data_list$Peptide_level$Quant_data_norm[subset_rows,subset_columns]
-  if(used_quant == "raw" & quant_level == "peptide")temp_dat <- data_list$Peptide_level$Quant_data[subset_rows,subset_columns]
-
-  if(used_quant == "norm" & quant_level == "protein" & main == "")main="Protein level - Normalized"
-  if(used_quant == "norm" & quant_level == "peptide" & main == "")main="Peptide level - Normalized"
-  if(used_quant == "raw" & quant_level == "protein" & main == "")main="Protein level - Raw"
-  if(used_quant == "raw" & quant_level == "peptide" & main == "")main="Peptide level - Raw"
-  ##order samples according to annotation?
-  if(is.null(breaks))breaks <- c(min(temp_dat,na.rm=T),max(temp_dat,na.rm=T))
-
-  if(!is.null(annotation))
-  {
-    if(ncol(annotation) == 1)
-    {
-      temp_dat <- temp_dat[,do.call(order, base::as.data.frame(annotation[, 1:ncol(annotation)]))]
-      annotation <- base::as.data.frame(annotation[do.call(order, base::as.data.frame(annotation[, 1:ncol(annotation)])),])
-      colnames(annotation) <- "anno"
-    }else
-    {
-      temp_dat <- temp_dat[,do.call(order, annotation[, 1:ncol(annotation)])]
-      annotation <- annotation[do.call(order, annotation[, 1:ncol(annotation)]),]
+#' Visualize data set on protein or peptide level in a heatmap
+#' @param data_list = output from load_MaxQ_data or load_Requant_data
+#' @param annotation = vector indicating how samples should be grouped or data
+#' frame with different annotations per cols and sampels in rows
+#' @param colors_annotation = named vector of colors with names corresponding to
+#' annotation group names
+#' @param subset_indices = integer vector indicating which rows of protein quant
+#' or peptide quant table should be plotted
+#' @param used_quant should be norm or raw indicating of normalized or raw
+#' intensities should be plotted
+#' @param quant_level should be protein or peptide. indicates if quant data on
+#' protein or peptide level should be plotted
+#' @param breaks should be a numerical vector indicating min and max value
+#' between which the colors of the plotting are ranging
+#' @param colors_plot should be a vector of 2 or 3 colors which should be used
+#' to color data in the range of breaks
+#' @param row_order integer vector indicating in which order rows should be
+#' plotted
+visualize_dataset_heatmap <- function(data_list, annotation=NULL,
+                                      colors_annotation=NULL, subset_rows=NULL,
+                                      subset_columns=NULL,
+                                      used_quant=c("norm", "raw"),
+                                      quant_level=c("protein", "peptide"),
+                                      breaks=NULL,
+                                      colors_plot=c("deepskyblue", "firebrick"),
+                                      main="", annotation_name="Sample",
+                                      row_order=NULL, show_rownames=FALSE,
+                                      rownames=NULL, remove_NA_rows=TRUE,
+                                      hclust_col=FALSE, hclust_row=FALSE){
+    used_quant <- used_quant[1]
+    quant_level <- quant_level[1]
+    # Only plot a subset of features?
+    if(is.null(subset_rows) & quant_level == "protein"){
+        subset_rows <- 1:nrow(data_list$Protein_level$Quant_data)
     }
-  }else
-  {
-    annotation$V1 <- colnames(temp_dat)
-  }
 
-  if(is.null(colors_annotation))
-  {
-    if(is.null(annotation))
-    {
-      colors_annotation <- grDevices::hcl.colors(ncol(temp_dat), alpha = 1, rev = FALSE)
-      names(colors_annotation) <- colnames(temp_dat)
-    }else
-    {
-      colors_annotation <- grDevices::hcl.colors(length(unique(annotation[,1])), alpha = 1, rev = FALSE)
-      names(colors_annotation) <- unique(annotation[,1])
-
-      # colors_annotation <- list()
-      #
-      # for(c in 1:ncol(annotation))
-      # {
-      #   colors_annotation[[c]] <- grDevices::hcl.colors(length(unique(annotation[,c])), alpha = 1, rev = FALSE)
-      #   names(colors_annotation[[c]]) <- unique(annotation[,c])
-      # }
-      # names(colors_annotation) <- colnames(annotation)
+    if(is.null(subset_rows) & quant_level == "peptide"){
+        subset_rows <- 1:nrow(data_list$Peptide_level$Quant_data)
     }
-  }
-  if(!is.list(colors_annotation))
-  {
-    colors_annotation <- list(anno=colors_annotation)
-  }
 
-  ###order rows by sum of intensities if no ordering is specified
-  if(is.null(row_order))row_order <- order(rowSums(temp_dat,na.rm=T))
-  temp_dat <- temp_dat[row_order,]
-
-  ###rownames
-  if(show_rownames == T)
-  {
-    if(!is.null(rownames))
-    {
-      rownames <- as.character(rownames)[row_order]
-    }else
-    {
-      rownames <- rownames(temp_dat)
+    if(is.null(subset_columns) & quant_level == "protein"){
+        subset_columns <- 1:ncol(data_list$Protein_level$Quant_data)
     }
-  }
 
-  ###remove rows only containing NAs?
-  if(remove_NA_rows==T)
-  {
-    if(!is.null(rownames))rownames <- rownames[which(rowSums(is.na(temp_dat)) < ncol(temp_dat))]
-    temp_dat <- temp_dat[which(rowSums(is.na(temp_dat)) < ncol(temp_dat)),]
-  }
+    if(is.null(subset_columns) & quant_level == "peptide"){
+        subset_columns <- 1:ncol(data_list$Peptide_level$Quant_data)
+    }
 
-  ###if names occur several times repeated then only keep the rowname in the middle of all rownames in a block
-  if(show_rownames == T)
-  {
-    last_changed = 0
-    for(i in 1:(length(rownames)-1))
-    {
-      if(rownames[i] != rownames[i+1] | i == (length(rownames)-1))
-      {
-        if(last_changed == i - 1)
-        {
-          rownames[i] <- rownames[i]
-          last_changed <- i
-        }else
-        {
-          temp_name <- rownames[i]
-          if(i != (length(rownames)-1))
-          {
-            rownames[(last_changed+1):i] <- ""
-            delta <- i - (last_changed)
-          }else
-          {
-            rownames[(last_changed+1):(i+1)] <- ""
-            delta <- i+1 - (last_changed)
-          }
+    if(!is.data.frame(annotation)){
+        annotation <- annotation[subset_columns]
+        annotation <- base::data.frame(anno=annotation)
+    }
 
-          rownames[last_changed+ceiling(delta/2)] <- temp_name
-          last_changed <- i
+    else{
+        annotation <- annotation[subset_columns, ]
+    }
+
+    # Which quantification data should be plotted, raw or normalized. Standard
+    # is normalized
+    if(used_quant == "norm" & quant_level == "protein"){
+        temp_dat <- data_list$Protein_level$Quant_data_norm[subset_rows,
+                                                            subset_columns]
+    }
+
+    if(used_quant == "raw" & quant_level == "protein"){
+        temp_dat <- data_list$Protein_level$Quant_data[subset_rows,
+                                                       subset_columns]
+    }
+
+
+    if(used_quant == "norm" & quant_level == "peptide"){
+        temp_dat <- data_list$Peptide_level$Quant_data_norm[subset_rows,
+                                                            subset_columns]
+    }
+
+    if(used_quant == "raw" & quant_level == "peptide"){
+        temp_dat <- data_list$Peptide_level$Quant_data[subset_rows,
+                                                       subset_columns]
+    }
+
+    if(used_quant == "norm" & quant_level == "protein" & main == ""){
+        main <- "Protein level - Normalized"
+    }
+
+    if(used_quant == "norm" & quant_level == "peptide" & main == ""){
+        main <- "Peptide level - Normalized"
+    }
+
+    if(used_quant == "raw" & quant_level == "protein" & main == ""){
+        main <- "Protein level - Raw"
+    }
+
+    if(used_quant == "raw" & quant_level == "peptide" & main == ""){
+        main <- "Peptide level - Raw"
+    }
+
+    # Order samples according to annotation?
+    if(is.null(breaks)){
+        breaks <- c(min(temp_dat, na.rm=TRUE), max(temp_dat, na.rm=TRUE))
+    }
+
+    if(!is.null(annotation)){
+        if(ncol(annotation) == 1){
+            df <- base::as.data.frame(annotation[, 1:ncol(annotation)])
+            temp_dat <- temp_dat[, do.call(order, df)]
+            annotation <- base::as.data.frame(annotation[do.call(order, df), ])
+            colnames(annotation) <- "anno"
         }
 
-      }
+        else{
+            df <- annotation[, 1:ncol(annotation)]
+            temp_dat <- temp_dat[, do.call(order, df)]
+            annotation <- annotation[do.call(order, df), ]
+        }
     }
-  }
 
-  ##plot
-  Heatmap(data = temp_dat,annotation = annotation,colors_annotation = colors_annotation,hclust_col = hclust_col,hclust_row = hclust_row,show_rownames = show_rownames,colors_plot = colors_plot,color_breaks = breaks,main=main,annotation_name = annotation_name,row_labels=rownames)
+    else{
+        annotation$V1 <- colnames(temp_dat)
+    }
 
+    if(is.null(colors_annotation)){
+        if(is.null(annotation)){
+            colors_annotation <- grDevices::hcl.colors(ncol(temp_dat),
+                                                       alpha=1, rev=FALSE)
+            names(colors_annotation) <- colnames(temp_dat)
+        }
+
+        else{
+            len <- length(unique(annotation[, 1]))
+            colors_annotation <- grDevices::hcl.colors(len, alpha=1, rev=FALSE)
+            names(colors_annotation) <- unique(annotation[, 1])
+        }
+    }
+
+    if(!is.list(colors_annotation)){
+        colors_annotation <- list(anno=colors_annotation)
+    }
+
+    # Order rows by sum of intensities if no ordering is specified
+    if(is.null(row_order)){
+        row_order <- order(rowSums(temp_dat, na.rm=TRUE))
+    }
+
+    temp_dat <- temp_dat[row_order, ]
+
+    # Rownames
+    if(show_rownames == TRUE){
+        if(!is.null(rownames)){
+            rownames <- as.character(rownames)[row_order]
+        }
+
+        else{
+            rownames <- rownames(temp_dat)
+        }
+    }
+
+    # Remove rows only containing NAs?
+    if(remove_NA_rows == TRUE){
+        locs <- which(rowSums(is.na(temp_dat)) < ncol(temp_dat))
+        temp_dat <- temp_dat[loc, ]
+
+        if(!is.null(rownames)){
+            rownames <- rownames[loc]
+        }
+    }
+
+    # If names occur several times repeated then only keep the rowname in the
+    # middle of all rownames in a block
+    if(show_rownames == TRUE){
+        last_changed <- 0
+
+        for(i in 1:(length(rownames) - 1)){
+            if(rownames[i] != rownames[i + 1] | i == (length(rownames) - 1)){
+                if(last_changed == i - 1){
+                    rownames[i] <- rownames[i] # XXX: What's this?
+                    last_changed <- i
+                }
+
+                else{
+                    temp_name <- rownames[i]
+
+                    if(i != (length(rownames) - 1)){
+                        rownames[(last_changed + 1):i] <- ""
+                        delta <- i - (last_changed)
+                    }
+                    else{
+                        rownames[(last_changed + 1):(i + 1)] <- ""
+                        delta <- i + 1 - (last_changed)
+                    }
+
+                    rownames[last_changed + ceiling(delta / 2)] <- temp_name
+                    last_changed <- i
+                }
+            }
+        }
+    }
+
+    # Plot
+    Heatmap(data=temp_dat, annotation=annotation,
+            colors_annotation=colors_annotation, hclust_col=hclust_col,
+            hclust_row=hclust_row, show_rownames=show_rownames,
+            colors_plot=colors_plot, color_breaks=breaks, main=main,
+            annotation_name=annotation_name, row_labels=rownames)
 }
 
 #' Normalize quantification data
