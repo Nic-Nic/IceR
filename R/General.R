@@ -1163,53 +1163,64 @@ visualize_dataset_heatmap <- function(data_list,annotation=NULL,colors_annotatio
 }
 
 #' Normalize quantification data
-#' @param data Table of quantifications with samples in columns and features in rows.
-#' @param method Method how data should be normalized. Select between "median","density","vsn". By default set to "median".
-#' @param norm_on_subset Optional: numeric vector of rows on which normalization factors should be determined (e.g. expected constant background)
-#' @param norm_to Optional: specify to which intensity all samples should be normalized. By default set to NULL indicating that samples are normalized to the average of samples.
+#' @param data Table of quantifications with samples in columns and features in
+#' rows.
+#' @param method Method how data should be normalized. Select between "median",
+#' '"density","vsn". By default set to "median".
+#' @param norm_on_subset Optional: numeric vector of rows on which normalization
+#' factors should be determined (e.g. expected constant background)
+#' @param norm_to Optional: specify to which intensity all samples should be
+#' normalized. By default set to NULL indicating that samples are normalized to
+#' the average of samples.
 #' @param main Titel of plots
 #' @details Normalize quantification data
 #' @return Table with normalized quantifications and density plots.
 #' @export
-normalize_data <- function(data,method=c("median","density","vsn"),norm_to=NULL,norm_on_subset=NULL,main="Data")
-{
-  method <- method[1]
-  if(is.null(norm_on_subset))norm_on_subset <- 1:nrow(data)
-  densityplots(data[norm_on_subset,],main=base::paste(main,"- Raw"),xlab="Intensity, log2",col = "black")
+normalize_data <- function(data, method=c("median", "density", "vsn"),
+                           norm_to=NULL, norm_on_subset=NULL, main="Data"){
+    method <- method[1]
 
-  if(method %in% c("density","median"))
-  {
-    maxima <- NULL
-    if(method == "density")
-    {
-      for(c in 1:ncol(data))
-      {
-        maxima <- append(maxima,maxDensity(data[norm_on_subset,c]))
-      }
-    }
-    if(method == "median")
-    {
-      maxima <- matrixStats::colMedians(as.matrix(data[norm_on_subset,]),na.rm=T)
+    if(is.null(norm_on_subset)){
+        norm_on_subset <- 1:nrow(data)
     }
 
-    if(is.null(norm_to))norm_to <- mean(maxima,na.rm=T)
-    norm_factors <- maxima-norm_to
-    data_norm <- data
-    for(c in 1:ncol(data))
-    {
-      data_norm[,c] <- data_norm[,c]-norm_factors[c]
+    densityplots(data[norm_on_subset, ], main=base::paste(main, "- Raw"),
+                 xlab="Intensity, log2", col="black")
+
+    if(method %in% c("density", "median")){
+        maxima <- NULL
+
+        if(method == "density"){
+            for(c in 1:ncol(data)){
+                maxima <- append(maxima, maxDensity(data[norm_on_subset, c]))
+            }
+        }
+
+        if(method == "median"){
+            maxima <- matrixStats::colMedians(as.matrix(data[norm_on_subset, ]),
+                                              na.rm=TRUE)
+        }
+
+        if(is.null(norm_to)){
+            norm_to <- mean(maxima, na.rm=TRUE)
+        }
+
+        norm_factors <- maxima - norm_to
+        data_norm <- data
+
+        for(c in 1:ncol(data)){
+            data_norm[, c] <- data_norm[, c] - norm_factors[c]
+        }
     }
 
-  }
+    if(method == "vsn"){
+        data_norm <- base::as.data.frame(vsn::justvsn(as.matrix(2^data)))
+    }
 
-  if(method == "vsn")
-  {
-    #library("vsn")
-    data_norm <- base::as.data.frame(vsn::justvsn(as.matrix(2^data)))
-  }
+    densityplots(data_norm, main=base::paste(main, "- Normalized"),
+                 xlab="Intensity, log2", col = "black")
 
-  densityplots(data_norm,main=base::paste(main,"- Normalized"),xlab="Intensity, log2",col = "black")
-  return(data_norm)
+    return(data_norm)
 }
 
 #' Generate stacked barplots
