@@ -700,316 +700,374 @@ compare_general_numbers <- function(list_of_data_lists,colors=c("darkgrey","choc
 }
 
 #' Compare coefficients of variation of quantifications between data sets.
-#' @param list_of_data_lists List object containing lists of loaded MaxQuant or IceR data. Requires sample annotation to be added by function add_annotations().
-#' @param colors Colors for data sets to be compared. By default two colors are specified ("darkgrey","chocolate3")
+#' @param list_of_data_lists List object containing lists of loaded MaxQuant or
+#' IceR data. Requires sample annotation to be added by function
+#' add_annotations().
+#' @param colors Colors for data sets to be compared. By default two colors are
+#' specified ("darkgrey","chocolate3")
 #' @param Legendpos Location of legend, By default set to "top"
 #' @param margins Margins aroung plot area. By default set to c(12,4,4,9)
 #' @param inset Inset of legend. By default set to c(-0.435,0)
-#' @param Annotation_column Which annotation column should be used to determine between which samples variability should be determined. By default set to 1.
-#' @param plot_for Specify if plots should be generated for protein-level ("protein"), peptide-level ("peptide") or both ("both"). By default set to "both".
-#' @param allow_missing_values Indicate if missing values are allowed during variability estimation. By default set to F.
-#' @param representation_of Indicate how results should be visualized. Select between "total","per group","per intensity". "total" = aggregate CVs into a single boxplot per data set. "per group" = aggregate CVs per annotation group per data set. "per intensity" = plot per data set CVs binned by protein/peptide abundance. By default set to "total".
-#' @param show_numbers Indicate if counts of available CVs per boxplot should be plotted. By default set to T.
-#' @param numbers_size Numeric value specifying plotting size of CV counts. By default set to 1.
-#' @param round_to_k Indicate if CV counts should be rounded to 1000 (K). By default set to T.
+#' @param Annotation_column Which annotation column should be used to determine
+#' between which samples variability should be determined. By default set to 1.
+#' @param plot_for Specify if plots should be generated for protein-level
+#' '("protein"), peptide-level ("peptide") or both ("both"). By default set to
+#' '"both".
+#' @param allow_missing_values Indicate if missing values are allowed during
+#' variability estimation. By default set to F.
+#' @param representation_of Indicate how results should be visualized. Select
+#' between "total","per group","per intensity". "total" = aggregate CVs into a
+#' single boxplot per data set. "per group" = aggregate CVs per annotation group
+#' per data set. "per intensity" = plot per data set CVs binned by
+#' protein/peptide abundance. By default set to "total".
+#' @param show_numbers Indicate if counts of available CVs per boxplot should be
+#' plotted. By default set to T.
+#' @param numbers_size Numeric value specifying plotting size of CV counts. By
+#' default set to 1.
+#' @param round_to_k Indicate if CV counts should be rounded to 1000 (K). By
+#' default set to T.
 #' @details Compare CVs between data sets.
 #' @return Comparison plots
 #' @export
-plot_accuracy <- function(list_of_data_lists,colors=c("darkgrey","chocolate3"),Legendpos = "topleft",margins=c(2,4,4,10),inset=c(-0.435,0),Annotation_column=1,plot_for=c("both","protein","peptide"),allow_missing_values=F,representation_of=c("total","per group","per intensity"),show_numbers=T,numbers_size=1,round_to_k=T)
-{
-  plot_for <- plot_for[1]
-  representation_of <- representation_of[1]
+plot_accuracy <- function(list_of_data_lists,
+                          colors=c("darkgrey", "chocolate3"),
+                          Legendpos="topleft", margins=c(2, 4, 4, 10),
+                          inset=c(-0.435, 0), Annotation_column=1,
+                          plot_for=c("both", "protein", "peptide"),
+                          allow_missing_values=FALSE,
+                          representation_of=c("total", "per group",
+                                              "per intensity"),
+                          show_numbers=TRUE, numbers_size=1, round_to_k=TRUE){
+    plot_for <- plot_for[1]
+    representation_of <- representation_of[1]
 
-  SDs_protein_list <- list()
-  SDs_peptide_list <- list()
-  for(n in names(list_of_data_lists))
-  {
-    if(plot_for %in% c("both","protein"))
-    {
-      ##protein
-      temp_dat <- list_of_data_lists[[n]]$Protein_level$Quant_data_norm
-      temp_anno <- list_of_data_lists[[n]]$Annotations[,Annotation_column]
-      SDs <- base::as.data.frame(matrix(ncol=4,nrow=nrow(temp_dat)*length(unique(temp_anno))))
-      colnames(SDs) <- c("SD","Dilution","Method","Intensity")
-      SDs$Dilution <- sort(rep(unique(temp_anno),nrow(temp_dat)))
-      SDs$Method <- base::paste("Protein_",n,sep="")
-      for(d in unique(temp_anno))
-      {
-        temp_dat_2 <- 2^as.matrix(temp_dat[,which(temp_anno==d)])
-        temp_sds <- matrixStats::rowSds(temp_dat_2,na.rm = allow_missing_values)
-        temp_mean <- rowMeans(temp_dat_2,na.rm = allow_missing_values)
-        temp_sds <- (temp_sds/temp_mean)*100
-        #missing_val <- which(rowSums(is.na(temp_dat_2))>0)
-        #temp_sds[missing_val] <- NA
-        SDs[which(SDs$Dilution == d),1] <- temp_sds
-        SDs[which(SDs$Dilution == d),4] <- matrixStats::rowMedians(temp_dat_2,na.rm=T)
-      }
-      SDs_protein_list[[n]] <- SDs
-    }
-    ##peptide
-    if(plot_for %in% c("both","peptide"))
-    {
-      temp_dat <- list_of_data_lists[[n]]$Peptide_level$Quant_data_norm
-      #check if we are looking at Requant data, if yes aggregate quantification per sequence
-      # if(any(names(list_of_data_lists[[n]]$Peptide_level) == "Meta_data_full"))
-      # {
-      #   temp_dat <- temp_dat[which(!grepl("_i",list_of_data_lists[[n]]$Peptide_level$Meta_data$Feature_name)),]
-      #   # quant <- stats::aggregate(2^temp_dat,by=list(Sequence = list_of_data_lists[[n]]$Peptide_level$Meta_data$Sequence),FUN=median,na.rm=T)
-      #   # rownames(quant) <- quant[,1]
-      #   # quant <- quant[,-1]
-      #   # temp_dat <- base::log2(quant)
-      # }
+    SDs_protein_list <- list()
+    SDs_peptide_list <- list()
 
-      temp_anno <- list_of_data_lists[[n]]$Annotations[,Annotation_column]
-      SDs <- base::as.data.frame(matrix(ncol=4,nrow=nrow(temp_dat)*length(unique(temp_anno))))
-      colnames(SDs) <- c("SD","Dilution","Method","Intensity")
-      SDs$Dilution <- sort(rep(unique(temp_anno),nrow(temp_dat)))
-      SDs$Method <- base::paste("Peptide_",n,sep="")
-      for(d in unique(temp_anno))
-      {
-        temp_dat_2 <- 2^as.matrix(temp_dat[,which(temp_anno==d)])
-        temp_sds <- matrixStats::rowSds(temp_dat_2,na.rm = allow_missing_values)
-        temp_mean <- rowMeans(temp_dat_2,na.rm = allow_missing_values)
-        temp_sds <- (temp_sds/temp_mean)*100
-        #missing_val <- which(rowSums(is.na(temp_dat_2))>0)
-        #temp_sds[missing_val] <- NA
-        SDs[which(SDs$Dilution == d),1] <- temp_sds
-        SDs[which(SDs$Dilution == d),4] <- matrixStats::rowMedians(temp_dat_2,na.rm=T)
-      }
-      SDs_peptide_list[[n]] <- SDs
-    }
-  }
+    for(n in names(list_of_data_lists)){
+        if(plot_for %in% c("both", "protein")){
+            # Protein
+            dat <- list_of_data_lists[[n]]
+            temp_dat <- dat$Protein_level$Quant_data_norm
+            temp_anno <- dat$Annotations[, Annotation_column]
+            nr <- nrow(temp_dat) * length(unique(temp_anno))
+            SDs <- base::as.data.frame(matrix(ncol=4, nrow=nr))
+            colnames(SDs) <- c("SD", "Dilution", "Method", "Intensity")
+            SDs$Dilution <- sort(rep(unique(temp_anno), nrow(temp_dat)))
+            SDs$Method <- base::paste("Protein_", n, sep="")
 
-  ###Combine and plot
-  SDs_combined_protein <- NULL
-  SDs_combined_peptide <- NULL
-  ##protein level
-  for(n in unique(c(names(SDs_protein_list),names(SDs_peptide_list))))
-  {
-    if(plot_for %in% c("both","protein"))
-    {
-      if(is.null(SDs_combined_protein))
-      {
-        SDs_combined_protein <- SDs_protein_list[[n]]
-      }else
-      {
-        SDs_combined_protein <- rbind(SDs_combined_protein,SDs_protein_list[[n]])
-      }
-    }
+            for(d in unique(temp_anno)){
+                temp_dat_2 <- 2^as.matrix(temp_dat[, which(temp_anno == d)])
+                temp_sds <- matrixStats::rowSds(temp_dat_2,
+                                                na.rm=allow_missing_values)
+                temp_mean <- rowMeans(temp_dat_2 ,na.rm=allow_missing_values)
+                temp_sds <- (temp_sds / temp_mean) * 100
+                SDs[which(SDs$Dilution == d), 1] <- temp_sds
+                meds <- matrixStats::rowMedians(temp_dat_2, na.rm=TRUE)
+                SDs[which(SDs$Dilution == d), 4] <- meds
+            }
 
-    if(plot_for %in% c("both","peptide"))
-    {
-      if(is.null(SDs_combined_peptide))
-      {
-        SDs_combined_peptide <- SDs_peptide_list[[n]]
-      }else
-      {
-        SDs_combined_peptide <- rbind(SDs_combined_peptide,SDs_peptide_list[[n]])
-      }
-    }
-
-  }
-
-  SDs_combined_protein$Method <- as.character(SDs_combined_protein$Method)
-  SDs_combined_peptide$Method <- as.character(SDs_combined_peptide$Method)
-
-  if(representation_of == "total")
-  {
-    unit_count_proteins <- ""
-    unit_count_peptides <- ""
-    ##determine number of quantifications on protein and peptide level
-    if(plot_for %in% c("both","protein"))
-    {
-      count_protein <- plyr::count(SDs_combined_protein$Method[which(!is.na(SDs_combined_protein$SD))])
-      if(any(count_protein$freq>2000) & round_to_k == T)
-      {
-        count_protein$freq <- count_protein$freq/1000
-        unit_count_proteins <- "K"
-      }
-    }
-    if(plot_for %in% c("both","peptide"))
-    {
-      count_peptide <- plyr::count(SDs_combined_peptide$Method[which(!is.na(SDs_combined_peptide$SD))])
-      if(any(count_peptide$freq>2000) & round_to_k == T)
-      {
-        count_peptide$freq <- count_peptide$freq/1000
-        unit_count_peptides <- "K"
-      }
-    }
-
-    par_save <- graphics::par()
-    graphics::par(mar=margins)
-    ###plot
-    if(plot_for %in% c("both","protein"))
-    {
-      p <- graphics::boxplot(SDs_combined_protein$SD~SDs_combined_protein[,3],outline=F,las=2,col=colors,xaxt = "n",xlab="",ylab="CV [%]",main="Protein - Precision of quantification")
-      graphics::par(xpd=T)
-      graphics::legend(Legendpos,inset=inset, legend = sort(unique(SDs_combined_protein[,3])), fill = colors,cex=0.8,text.font=1,horiz=F,border = NA,bg="transparent",box.col = NA,ncol=1)
-      graphics::par(xpd=F)
-      range_y <- graphics::par("usr")[4]-graphics::par("usr")[3]
-      if(show_numbers == T)
-      {
-        for(n in 1:length(names(SDs_protein_list)))
-        {
-          y <- p$stats[3,n]+(range_y*0.05)
-          graphics::text(n,y,base::paste(round(count_protein$freq[which(count_protein$x==sort(unique(SDs_combined_protein[,3]))[n])],digits = 0),unit_count_proteins,sep=""),cex=numbers_size)
+            SDs_protein_list[[n]] <- SDs
         }
-      }
 
-    }
+        # Peptide
+        if(plot_for %in% c("both","peptide")){
+            dat <- list_of_data_lists[[n]]
+            temp_dat <- dat$Peptide_level$Quant_data_norm
+            temp_anno <- dat$Annotations[, Annotation_column]
+            nr <- nrow(temp_dat) * length(unique(temp_anno))
+            SDs <- base::as.data.frame(matrix(ncol=4, nrow=nr))
+            colnames(SDs) <- c("SD", "Dilution", "Method", "Intensity")
+            SDs$Dilution <- sort(rep(unique(temp_anno), nrow(temp_dat)))
+            SDs$Method <- base::paste("Peptide_", n, sep="")
 
-    if(plot_for %in% c("both","peptide"))
-    {
-      p <- graphics::boxplot(SDs_combined_peptide$SD~SDs_combined_peptide$Method,outline=F,las=2,col=colors,xaxt = "n",xlab="",ylab="CV [%]",main="Peptide - Precision of quantification")
-      graphics::par(xpd=T)
-      graphics::legend(Legendpos,inset=inset, legend = sort(unique(SDs_combined_peptide[,3])), fill = colors,cex=0.8,text.font=1,horiz=F,border = NA,bg="transparent",box.col = NA,ncol=1)
-      graphics::par(xpd=F)
-      range_y <- graphics::par("usr")[4]-graphics::par("usr")[3]
-      if(show_numbers == T)
-      {
-        for(n in 1:length(names(SDs_peptide_list)))
-        {
-          y <- p$stats[3,n]+(range_y*0.05)
-          graphics::text(n,y,base::paste(round(count_peptide$freq[which(count_peptide$x==sort(unique(SDs_combined_peptide[,3]))[n])],digits = 0),unit_count_peptides,sep=""),cex=numbers_size)
+            for(d in unique(temp_anno)){
+                temp_dat_2 <- 2^as.matrix(temp_dat[, which(temp_anno == d)])
+                temp_sds <- matrixStats::rowSds(temp_dat_2,
+                                                na.rm=allow_missing_values)
+                temp_mean <- rowMeans(temp_dat_2, na.rm=allow_missing_values)
+                temp_sds <- (temp_sds / temp_mean) * 100
+                SDs[which(SDs$Dilution == d), 1] <- temp_sds
+                meds <- matrixStats::rowMedians(temp_dat_2, na.rm=TRUE)
+                SDs[which(SDs$Dilution == d), 4] <- meds
+            }
+
+            SDs_peptide_list[[n]] <- SDs
         }
-      }
     }
-    par <- par_save
-  }
 
-  if(representation_of == "per group")
-  {
-    unit_count_proteins <- ""
-    unit_count_peptides <- ""
+    # Combine and plot
+    SDs_combined_protein <- NULL
+    SDs_combined_peptide <- NULL
 
-    if(plot_for %in% c("both","protein"))col_name <- colnames(SDs_combined_protein)[2]
-    if(plot_for %in% c("both","peptide"))col_name <- colnames(SDs_combined_peptide)[2]
-    ##determine number of quantifications on protein and peptide level
-    if(plot_for %in% c("both","protein"))
-    {
-      count_protein <- plyr::count(SDs_combined_protein[which(!is.na(SDs_combined_protein$SD)),],vars = c("Method",col_name))
-      if(any(count_protein$freq>2000) & round_to_k == T)
-      {
-        count_protein$freq <- count_protein$freq/1000
-        unit_count_proteins <- "K"
-      }
-      count_protein <- count_protein[order(count_protein[,2]),]
-    }
-    if(plot_for %in% c("both","peptide"))
-    {
-      count_peptide <- plyr::count(SDs_combined_peptide[which(!is.na(SDs_combined_peptide$SD)),],vars = c("Method",col_name))
-      if(any(count_peptide$freq>2000) & round_to_k == T)
-      {
-        count_peptide$freq <- count_peptide$freq/1000
-        unit_count_peptides <- "K"
-      }
-      count_peptide <- count_peptide[order(count_peptide[,2]),]
-    }
-    par_save <- graphics::par()
-    graphics::par(mar=margins)
-    if(plot_for %in% c("both","protein"))names <- SDs_combined_protein[!duplicated(SDs_combined_protein[,2:3]),]
-    if(plot_for %in% c("both","peptide"))names <- SDs_combined_peptide[!duplicated(SDs_combined_peptide[,2:3]),]
-    names <- names[order(names[,2]),2]
-    ###plot
-    if(plot_for %in% c("both","protein"))
-    {
-      p <- graphics::boxplot(SDs_combined_protein$SD~SDs_combined_protein$Method+SDs_combined_protein[,2],outline=F,las=2,col=colors,xlab="",names=names,ylab="CV [%]",main="Protein - Precision of quantification")
-      graphics::par(xpd=T)
-      graphics::legend(Legendpos,inset=inset, legend = sort(unique(SDs_combined_protein[,3])), fill = colors,cex=0.8,text.font=1,horiz=F,border = NA,bg="transparent",box.col = NA,ncol=1)
-      graphics::par(xpd=F)
-      range_y <- graphics::par("usr")[4]-graphics::par("usr")[3]
-      if(show_numbers == T)
-      {
-        for(n in 1:nrow(count_protein))
-        {
-          y <- p$stats[3,n]+(range_y*0.02)
-          graphics::text(n,y,base::paste(round(count_protein$freq[n],digits = 0),unit_count_proteins,sep=""),cex=numbers_size/2)
+    # Protein level
+    for(n in unique(c(names(SDs_protein_list), names(SDs_peptide_list)))){
+        if(plot_for %in% c("both", "protein")){
+            if(is.null(SDs_combined_protein)){
+                SDs_combined_protein <- SDs_protein_list[[n]]
+            }
+
+            else{
+                SDs_combined_protein <- rbind(SDs_combined_protein,
+                                              SDs_protein_list[[n]])
+            }
         }
-      }
-    }
 
-    if(plot_for %in% c("both","peptide"))
-    {
-      p <- graphics::boxplot(SDs_combined_peptide$SD~SDs_combined_peptide$Method+SDs_combined_peptide[,2],outline=F,las=2,col=colors,names=names,xlab="",ylab="CV [%]",main="Peptide - Precision of quantification")
-      graphics::par(xpd=T)
-      graphics::legend(Legendpos,inset=inset, legend = sort(unique(SDs_combined_peptide[,3])), fill = colors,cex=0.8,text.font=1,horiz=F,border = NA,bg="transparent",box.col = NA,ncol=1)
-      graphics::par(xpd=F)
-      range_y <- graphics::par("usr")[4]-graphics::par("usr")[3]
-      if(show_numbers == T)
-      {
-        for(n in 1:nrow(count_peptide))
-        {
-          y <- p$stats[3,n]+(range_y*0.02)
-          graphics::text(n,y,base::paste(round(count_peptide$freq[n],digits = 0),unit_count_peptides,sep=""),cex=numbers_size/2)
+        if(plot_for %in% c("both", "peptide")){
+            if(is.null(SDs_combined_peptide)){
+                SDs_combined_peptide <- SDs_peptide_list[[n]]
+            }
+
+            else{
+                SDs_combined_peptide <- rbind(SDs_combined_peptide,
+                                              SDs_peptide_list[[n]])
+            }
         }
-      }
     }
-    par <- par_save
 
-  }
+    SDs_combined_protein$Method <- as.character(SDs_combined_protein$Method)
+    SDs_combined_peptide$Method <- as.character(SDs_combined_peptide$Method)
 
-  if(representation_of == "per intensity")
-  {
-    if(plot_for %in% c("both","protein"))
-    {
-      ylim <- c(0,max(SDs_combined_protein$SD,na.rm=T))
-      for(m in sort(unique(SDs_combined_protein$Method)))
-      {
-        ind <- which(sort(unique(SDs_combined_protein$Method)) == m)
+    if(representation_of == "total"){
+        unit_count_proteins <- ""
+        unit_count_peptides <- ""
 
-        sel <- which(SDs_combined_protein$Method == m & !is.na(SDs_combined_protein$SD))
+        # Determine number of quantifications on protein and peptide level
+        if(plot_for %in% c("both", "protein")){
+            loc <- which(!is.na(SDs_combined_protein$SD))
+            count_protein <- plyr::count(SDs_combined_protein$Method[loc])
 
-        groups <- cut(base::log2(SDs_combined_protein$Intensity[sel]),breaks = 10)
-
-        counts <- plyr::count(groups)
-        counts <- counts[which(!is.na(counts[,1])),]
-
-        graphics::boxplot(SDs_combined_protein$SD[sel]~groups,las=2,xlab="",ylab="CV [%]",outline=F,col=colors[ind],main=m,ylim=ylim)
-
-        ymax <- graphics::par("usr")[4]
-        for(c in 1:10)
-        {
-          graphics::text(c,ymax,counts[c,2],pos=1,cex=0.5)
+            if(any(count_protein$freq > 2000) & round_to_k == TRUE){
+                count_protein$freq <- count_protein$freq / 1000
+                unit_count_proteins <- "K"
+            }
         }
-        graphics::text(10.5,ymax,sum(counts[,2]),pos=1,cex=0.5,font=2)
-      }
-    }
 
+        if(plot_for %in% c("both", "peptide")){
+            loc <- which(!is.na(SDs_combined_peptide$SD))
+            count_peptide <- plyr::count(SDs_combined_peptide$Method[loc])
 
-    if(plot_for %in% c("both","peptide"))
-    {
-      ylim <- c(0,max(SDs_combined_peptide$SD,na.rm=T))
-      for(m in sort(unique(SDs_combined_peptide$Method)))
-      {
-        ind <- which(sort(unique(SDs_combined_peptide$Method)) == m)
-
-        sel <- which(SDs_combined_peptide$Method == m & !is.na(SDs_combined_peptide$SD))
-
-        groups <- cut(base::log2(SDs_combined_peptide$Intensity[sel]),breaks = 10)
-
-        counts <- plyr::count(groups)
-        counts <- counts[which(!is.na(counts[,1])),]
-
-        graphics::boxplot(SDs_combined_peptide$SD[sel]~groups,las=2,xlab="",ylab="CV [%]",outline=F,col=colors[ind],main=m,ylim=ylim)
-
-        ymax <- graphics::par("usr")[4]
-        for(c in 1:10)
-        {
-          graphics::text(c,ymax,counts[c,2],pos=1,cex=0.5)
+            if(any(count_peptide$freq > 2000) & round_to_k == TRUE){
+                count_peptide$freq <- count_peptide$freq / 1000
+                unit_count_peptides <- "K"
+            }
         }
-        graphics::text(10.5,ymax,sum(counts[,2]),pos=1,cex=0.5,font=2)
-      }
+
+        par_save <- graphics::par()
+        graphics::par(mar=margins)
+
+        # Plot
+        if(plot_for %in% c("both", "protein")){
+            sds <- SDs_combined_protein$SD~SDs_combined_protein[, 3]
+            srt <- sort(unique(SDs_combined_protein[, 3]))
+            p <- graphics::boxplot(sds, outline=FALSE, las=2, col=colors,
+                                   xaxt="n", xlab="", ylab="CV [%]",
+                                   main="Protein - Precision of quantification")
+            graphics::par(xpd=TRUE)
+            graphics::legend(Legendpos, inset=inset, legend=srt, fill=colors,
+                             cex=0.8, text.font=1, horiz=FALSE, border=NA,
+                             bg="transparent", box.col=NA, ncol=1)
+            graphics::par(xpd=FALSE)
+            range_y <- graphics::par("usr")[4] - graphics::par("usr")[3]
+
+            if(show_numbers == TRUE){
+                for(n in 1:length(names(SDs_protein_list))){
+                    y <- p$stats[3, n] + (range_y * 0.05)
+                    loc <- which(count_protein$x == srt[n])
+                    txt <- base::paste(round(count_protein$freq[loc], digits=0),
+                                       unit_count_proteins, sep="")
+                    graphics::text(n, y, txt, cex=numbers_size)
+                }
+            }
+        }
+
+        if(plot_for %in% c("both", "peptide")){
+            sds <- SDs_combined_peptide$SD~SDs_combined_peptide$Method
+            srt <- sort(unique(SDs_combined_peptide[, 3]))
+            p <- graphics::boxplot(sds, outline=FALSE, las=2, col=colors,
+                                   xaxt="n", xlab="", ylab="CV [%]",
+                                   main="Peptide - Precision of quantification")
+            graphics::par(xpd=TRUE)
+            graphics::legend(Legendpos, inset=inset, legend=srt, fill=colors,
+                             cex=0.8, text.font=1, horiz=FALSE, border=NA,
+                             bg="transparent", box.col=NA, ncol=1)
+            graphics::par(xpd=FALSE)
+            range_y <- graphics::par("usr")[4] - graphics::par("usr")[3]
+
+            if(show_numbers == TRUE){
+                for(n in 1:length(names(SDs_peptide_list))){
+                    y <- p$stats[3, n] + (range_y * 0.05)
+                    loc <- which(count_peptide$x == srt[n])
+                    txt <- base::paste(round(count_peptide$freq[loc], digits=0),
+                                       unit_count_peptides, sep="")
+                    graphics::text(n, y, txt, cex=numbers_size)
+                }
+            }
+        }
+
+        par <- par_save
     }
 
+    if(representation_of == "per group"){
+        unit_count_proteins <- ""
+        unit_count_peptides <- ""
+
+        if(plot_for %in% c("both", "protein")){
+            col_name <- colnames(SDs_combined_protein)[2]
+        }
+
+        if(plot_for %in% c("both", "peptide")){
+            col_name <- colnames(SDs_combined_peptide)[2]
+        }
+
+        # Determine number of quantifications on protein and peptide level
+        if(plot_for %in% c("both", "protein")){
+            sd <- SDs_combined_protein[which(!is.na(SDs_combined_protein$SD)), ]
+            count_protein <- plyr::count(sd, vars=c("Method", col_name))
+
+            if(any(count_protein$freq > 2000) & round_to_k == TRUE){
+                count_protein$freq <- count_protein$freq / 1000
+                unit_count_proteins <- "K"
+            }
+
+            count_protein <- count_protein[order(count_protein[, 2]), ]
+        }
+
+        if(plot_for %in% c("both", "peptide")){
+            sd <- SDs_combined_peptide[which(!is.na(SDs_combined_peptide$SD)), ]
+            count_peptide <- plyr::count(sd, vars=c("Method", col_name))
+
+            if(any(count_peptide$freq > 2000) & round_to_k == TRUE){
+                count_peptide$freq <- count_peptide$freq / 1000
+                unit_count_peptides <- "K"
+            }
+
+            count_peptide <- count_peptide[order(count_peptide[, 2]), ]
+        }
+
+        par_save <- graphics::par()
+        graphics::par(mar=margins)
+
+        if(plot_for %in% c("both", "protein")){
+            dups <- duplicated(SDs_combined_protein[, 2:3])
+            names <- SDs_combined_protein[!dups, ]
+        }
+
+        if(plot_for %in% c("both", "peptide")){
+            dups <- duplicated(SDs_combined_peptide[, 2:3])
+            names <- SDs_combined_peptide[!dups, ]
+        }
+
+        names <- names[order(names[, 2]), 2]
+
+        # Plot
+        if(plot_for %in% c("both", "protein")){
+            sds <- SDs_combined_protein$SD~SDs_combined_protein$Method
+            sds <- sds + SDs_combined_protein[, 2]
+            p <- graphics::boxplot(sds, outline=FALSE, las=2, col=colors,
+                                   xlab="", names=names, ylab="CV [%]",
+                                   main="Protein - Precision of quantification")
+            graphics::par(xpd=TRUE)
+            graphics::legend(Legendpos, inset=inset,
+                             legend=sort(unique(SDs_combined_protein[, 3])),
+                             fill=colors, cex=0.8, text.font=1, horiz=FALSE,
+                             border=NA, bg="transparent", box.col=NA, ncol=1)
+            graphics::par(xpd=FALSE)
+            range_y <- graphics::par("usr")[4] - graphics::par("usr")[3]
+
+            if(show_numbers == TRUE){
+                for(n in 1:nrow(count_protein)){
+                    y <- p$stats[3, n] + (range_y * 0.02)
+                    txt <- base::paste(round(count_protein$freq[n], digits=0),
+                                       unit_count_proteins, sep="")
+                    graphics::text(n, y, txt, cex=numbers_size / 2)
+                }
+            }
+        }
+
+        if(plot_for %in% c("both", "peptide")){
+            sds <- SDs_combined_peptide$SD~SDs_combined_peptide$Method
+            sds <- sds + SDs_combined_peptide[, 2]
+            p <- graphics::boxplot(sds, outline=FASLE, las=2, col=colors,
+                                   names=names, xlab="", ylab="CV [%]",
+                                   main="Peptide - Precision of quantification")
+            graphics::par(xpd=TRUE)
+            graphics::legend(Legendpos, inset=inset,
+                             legend=sort(unique(SDs_combined_peptide[, 3])),
+                             fill=colors, cex=0.8, text.font=1, horiz=FALSE,
+                             border=NA, bg="transparent", box.col=NA, ncol=1)
+            graphics::par(xpd=FALSE)
+            range_y <- graphics::par("usr")[4] - graphics::par("usr")[3]
+
+            if(show_numbers == TRUE){
+                for(n in 1:nrow(count_peptide)){
+                    y <- p$stats[3, n] + (range_y * 0.02)
+                    txt <- base::paste(round(count_peptide$freq[n], digits=0),
+                                       unit_count_peptides, sep="")
+                    graphics::text(n, y, txt, cex=numbers_size / 2)
+                }
+            }
+        }
+
+        par <- par_save
+    }
+
+    if(representation_of == "per intensity"){
+        if(plot_for %in% c("both", "protein")){
+            ylim <- c(0, max(SDs_combined_protein$SD, na.rm=TRUE))
+
+            for(m in sort(unique(SDs_combined_protein$Method))){
+                ind <- which(sort(unique(SDs_combined_protein$Method)) == m)
+                sel_a <- SDs_combined_protein$Method == m
+                sel_b <- !is.na(SDs_combined_protein$SD)
+                sel <- which(sel_a & sel_b)
+                groups <- cut(base::log2(SDs_combined_protein$Intensity[sel]),
+                              breaks=10)
+                counts <- plyr::count(groups)
+                counts <- counts[which(!is.na(counts[, 1])), ]
+
+                graphics::boxplot(SDs_combined_protein$SD[sel]~groups,
+                                  las=2, xlab="", ylab="CV [%]", outline=FALSE,
+                                  col=colors[ind], main=m, ylim=ylim)
+                ymax <- graphics::par("usr")[4]
+
+                for(c in 1:10){
+                    graphics::text(c, ymax, counts[c, 2], pos=1, cex=0.5)
+                }
+
+                graphics::text(10.5, ymax, sum(counts[, 2]), pos=1, cex=0.5,
+                               font=2)
+            }
+        }
 
 
-  }
+        if(plot_for %in% c("both", "peptide")){
+            ylim <- c(0, max(SDs_combined_peptide$SD, na.rm=TRUE))
 
+            for(m in sort(unique(SDs_combined_peptide$Method))){
+                ind <- which(sort(unique(SDs_combined_peptide$Method)) == m)
+                sel_a <- SDs_combined_peptide$Method == m
+                sel_b <- !is.na(SDs_combined_peptide$SD)
+                sel <- which(sel_a & sel_b)
+                groups <- cut(base::log2(SDs_combined_peptide$Intensity[sel]),
+                              breaks=10)
+                counts <- plyr::count(groups)
+                counts <- counts[which(!is.na(counts[, 1])), ]
 
-  #n <- length(names(list_of_data_lists))
-  #graphics::axis(1, at = 0:1*n + (n-(0.5*(n-1))), labels = c("Peptide-level","Protein-level"), tick = TRUE)
+                graphics::boxplot(SDs_combined_peptide$SD[sel]~groups,
+                                  las=2, xlab="", ylab="CV [%]", outline=FALSE,
+                                  col=colors[ind], main=m, ylim=ylim)
+                ymax <- graphics::par("usr")[4]
 
-  #graphics::legend(Legendpos,inset=c(-0.12,0), legend = names(list_of_data_lists), fill = colors,cex=0.8,ncol=1,text.font=1,horiz=T,border = NA,bg="transparent",box.col = NA)
+                for(c in 1:10){
+                    graphics::text(c, ymax, counts[c, 2], pos=1, cex=0.5)
+                }
+
+                graphics::text(10.5, ymax, sum(counts[, 2]), pos=1, cex=0.5,
+                               font=2)
+            }
+        }
+    }
 }
 
 #' Visualize data set on protein or peptide level in a heatmap
