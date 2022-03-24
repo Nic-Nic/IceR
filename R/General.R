@@ -572,131 +572,152 @@ determine_general_numbers <- function(data_list)
 }
 
 #' Compare general numbers between data sets
-#' @param list_of_data_lists List object containing lists of loaded MaxQuant or IceR data
-#' @param colors Colors for data sets to be compared. By default two colors are specified ("darkgrey","chocolate3")
+#' @param list_of_data_lists List object containing lists of loaded MaxQuant or
+#' IceR data
+#' @param colors Colors for data sets to be compared. By default two colors are
+#' specified ("darkgrey","chocolate3")
 #' @param Legendpos Location of legend, By default set to "top"
 #' @param margins Margins aroung plot area. By default set to c(12,4,4,9)
 #' @param inset Inset of legend. By default set to c(-0.435,0)
 #' @details Compare general numbers between data sets
 #' @return Comparison plots
 #' @export
-compare_general_numbers <- function(list_of_data_lists,colors=c("darkgrey","chocolate3"),Legendpos = "top",margins=c(12,4,4,9),inset=c(-0.435,0))
-{
-  ###protein numbers
-  dat_prot <- NULL
-  names_available=NULL
-  for(i in names(list_of_data_lists))
-  {
-    if("Protein_level" %in% names(list_of_data_lists[[i]]))
-    {
-      if(is.null(dat_prot))
-      {
-        dat_prot <- list_of_data_lists[[i]]$Protein_level$num_prots
-      }else
-      {
-        dat_prot <- dplyr::full_join(dat_prot,list_of_data_lists[[i]]$Protein_level$num_prots,by="Organism")
-      }
-      names_available <- append(names_available,i)
+compare_general_numbers <- function(list_of_data_lists,
+                                    colors=c("darkgrey", "chocolate3"),
+                                    Legendpos="top", margins=c(12, 4, 4, 9),
+                                    inset=c(-0.435, 0)){
+    # Protein numbers
+    dat_prot <- NULL
+    names_available <- NULL
+
+    for(i in names(list_of_data_lists)){
+        if("Protein_level" %in% names(list_of_data_lists[[i]])){
+            if(is.null(dat_prot)){
+                dat_prot <- list_of_data_lists[[i]]$Protein_level$num_prots
+            }
+
+            else{
+                use_p <- list_of_data_lists[[i]]$Protein_level$num_prots
+                dat_prot <- dplyr::full_join(dat_prot, use_p, by="Organism")
+            }
+
+            names_available <- append(names_available, i)
+        }
     }
 
-  }
-  colnames(dat_prot)[2:ncol(dat_prot)] <- names_available
-  orgs <- dat_prot$Organism
-  dat_prot <- dat_prot[,-1]
-  dat_prot <- base::as.data.frame(t(dat_prot))
-  rownames(dat_prot) <- names_available
-  colnames(dat_prot) <- orgs
+    colnames(dat_prot)[2:ncol(dat_prot)] <- names_available
+    orgs <- dat_prot$Organism
+    dat_prot <- dat_prot[, -1]
+    dat_prot <- base::as.data.frame(t(dat_prot))
+    rownames(dat_prot) <- names_available
+    colnames(dat_prot) <- orgs
 
-  dat_prot <- dat_prot[,which(!is.na(colnames(dat_prot)) & colnames(dat_prot) != "")]
+    dat_prot <- dat_prot[, which(!is.na(colnames(dat_prot)) & colnames(dat_prot) != "")]
 
-  if(length(colors) > length(names_available))colors <- colors[1:length(names_available)]
-
-  ###peptide numbers
-  dat_peps <- NULL
-  for(i in names(list_of_data_lists))
-  {
-    if("Peptide_level" %in% names(list_of_data_lists[[i]]))
-    {
-      if(is.null(dat_peps))
-      {
-        dat_peps <- list_of_data_lists[[i]]$Peptide_level$num_peptides
-      }else
-      {
-        dat_peps <- dplyr::full_join(dat_peps,list_of_data_lists[[i]]$Peptide_level$num_peptides,by="Organism")
-      }
+    if(length(colors) > length(names_available)){
+        colors <- colors[1:length(names_available)]
     }
 
-  }
-  colnames(dat_peps)[2:ncol(dat_peps)] <- names_available
-  orgs <- dat_peps$Organism
-  dat_peps <- dat_peps[,-1]
-  dat_peps <- base::as.data.frame(t(dat_peps))
-  rownames(dat_peps) <- names_available
-  colnames(dat_peps) <- orgs
+    # Peptide numbers
+    dat_peps <- NULL
+    for(i in names(list_of_data_lists)){
+        if("Peptide_level" %in% names(list_of_data_lists[[i]])){
+            if(is.null(dat_peps)){
+                dat_peps <- list_of_data_lists[[i]]$Peptide_level$num_peptides
+            }
 
-  dat_peps <- dat_peps[,which(!is.na(colnames(dat_peps)) & colnames(dat_peps) != "")]
-
-
-  ###missing values
-  missing_values_prot <- NULL
-  for(i in names(list_of_data_lists)) ###protein level
-  {
-    if("Protein_level" %in% names(list_of_data_lists[[i]]))
-    {
-      missing_values_prot <- append(missing_values_prot,list_of_data_lists[[i]]$Protein_level$missing_values[2])
-    }else
-    {
-      missing_values_prot <- append(missing_values_prot,NA)
+            else{
+                peps <- list_of_data_lists[[i]]$Peptide_level$num_peptides
+                dat_peps <- dplyr::full_join(dat_peps, peps, by="Organism")
+            }
+        }
     }
-  }
-  missing_values_peps <- NULL
-  for(i in names(list_of_data_lists)) ###peptide level
-  {
-    if("Peptide_level" %in% names(list_of_data_lists[[i]]))
-    {
-      missing_values_peps <- append(missing_values_peps,list_of_data_lists[[i]]$Peptide_level$missing_values[2])
-    }else
-    {
-      missing_values_peps <- append(missing_values_peps,NA)
+
+    colnames(dat_peps)[2:ncol(dat_peps)] <- names_available
+    orgs <- dat_peps$Organism
+    dat_peps <- dat_peps[, -1]
+    dat_peps <- base::as.data.frame(t(dat_peps))
+    rownames(dat_peps) <- names_available
+    colnames(dat_peps) <- orgs
+
+    loc <- which(!is.na(colnames(dat_peps)) & colnames(dat_peps) != "")
+    dat_peps <- dat_peps[, loc]
+
+
+    # Missing values
+    missing_values_prot <- NULL
+
+    for(i in names(list_of_data_lists)){ # Protein level
+        if("Protein_level" %in% names(list_of_data_lists[[i]])){
+            prt <- list_of_data_lists[[i]]$Protein_level$missing_values[2]
+            missing_values_prot <- append(missing_values_prot, prt)
+        }
+
+        else{
+            missing_values_prot <- append(missing_values_prot, NA)
+        }
     }
-  }
-  missing_values <- cbind(missing_values_prot,missing_values_peps)
-  rownames(missing_values) <- names(list_of_data_lists)
-  colnames(missing_values) <- c("Protein","Peptide")
 
+    missing_values_peps <- NULL
 
-  ###plot protein count
-  p <- BarplotsSBS(dat_prot,main="Number of identified proteins",ylab="Count",col=colors,AvgLine = F,shownumbers = T,Legendtitle = "Data",Legends = rownames(dat_prot),Legendpos = Legendpos,margins=margins,inset=inset)
+    for(i in names(list_of_data_lists)){ # Peptide level
+        if("Peptide_level" %in% names(list_of_data_lists[[i]])){
+            pep <- list_of_data_lists[[i]]$Peptide_level$missing_values[2]
+            missing_values_peps <- append(missing_values_peps, pep)
+        }
 
-  ###plot peptide count
-  p <- BarplotsSBS(dat_peps,main="Number of identified peptides",ylab="Count",col=colors,AvgLine = F,shownumbers = T,Legendtitle = "Data",Legends = rownames(dat_peps),Legendpos = Legendpos,margins=margins,inset=inset)
-
-  ###plot missing value rates
-  p <- BarplotsSBS(missing_values,AvgLine = F,Name = colnames(missing_values),main="Missing value rate",ylab="Fraction missing values [%]",col=colors,Legendtitle = "Data",Legends = names(list_of_data_lists),Legendpos = Legendpos,shownumbers = T,margins=margins,inset=inset)
-
-  ###plot number of quantified proteins per sample and data_list
-
-  for(i in names(list_of_data_lists))
-  {
-    if("Protein_level" %in% names(list_of_data_lists[[i]]))
-    {
-      Barplots(list_of_data_lists[[i]]$Protein_level$num_prots_per_sample[,order(as.numeric(as.matrix(list_of_data_lists[[i]]$Protein_level$num_prots_per_sample)))],
-               shownumbers = F,
-               col=colors[which(names(list_of_data_lists) == i)],
-               xlab = "",
-               ylab="Count",
-               main=base::paste(i,"- Number of quantified proteins"))
+        else{
+            missing_values_peps <- append(missing_values_peps,NA)
+        }
     }
-    if("Peptide_level" %in% names(list_of_data_lists[[i]]))
-    {
-      Barplots(list_of_data_lists[[i]]$Peptide_level$num_peptides_per_sample[,order(as.numeric(as.matrix(list_of_data_lists[[i]]$Peptide_level$num_peptides_per_sample)))],
-               shownumbers = F,
-               col=colors[which(names(list_of_data_lists) == i)],
-               xlab = "",
-               ylab="Count",
-               main=base::paste(i,"- Number of quantified peptides"))
+
+    missing_values <- cbind(missing_values_prot, missing_values_peps)
+    rownames(missing_values) <- names(list_of_data_lists)
+    colnames(missing_values) <- c("Protein", "Peptide")
+
+    # Plot protein count
+    p <- BarplotsSBS(dat_prot, main="Number of identified proteins",
+                     ylab="Count", col=colors, AvgLine=FALSE, shownumbers=TRUE,
+                     Legendtitle="Data", Legends=rownames(dat_prot),
+                     Legendpos=Legendpos, margins=margins, inset=inset)
+
+    # Plot peptide count
+    p <- BarplotsSBS(dat_peps, main="Number of identified peptides",
+                     ylab="Count", col=colors, AvgLine=FALSE, shownumbers=TRUE,
+                     Legendtitle="Data", Legends=rownames(dat_peps),
+                     Legendpos=Legendpos, margins=margins, inset=inset)
+
+    # Plot missing value rates
+    p <- BarplotsSBS(missing_values, AvgLine=FALSE,
+                     Name=colnames(missing_values),
+                     main="Missing value rate",
+                     ylab="Fraction missing values [%]",
+                     col=colors, Legendtitle="Data",
+                     Legends=names(list_of_data_lists), Legendpos=Legendpos,
+                     shownumbers=TRUE, margins=margins, inset=inset)
+
+    # Plot number of quantified proteins per sample and data_list
+    for(i in names(list_of_data_lists)){
+        if("Protein_level" %in% names(list_of_data_lists[[i]])){
+            aux <- list_of_data_lists[[i]]$Protein_level$num_prots_per_sample
+            ord <- order(as.numeric(as.matrix(aux)))
+            prt <- aux[, ord]
+            Barplots(prt, shownumbers=FALSE,
+                     col=colors[which(names(list_of_data_lists) == i)],
+                     xlab = "", ylab="Count",
+                     main=base::paste(i, "- Number of quantified proteins"))
+        }
+
+        if("Peptide_level" %in% names(list_of_data_lists[[i]])){
+            aux <- list_of_data_lists[[i]]$Peptide_level$num_peptides_per_sample
+            ord <- order(as.numeric(as.matrix(aux)))
+            pep <- aux[, ord]
+            Barplots(pep, shownumbers=FALSE,
+                     col=colors[which(names(list_of_data_lists) == i)],
+                     xlab = "", ylab="Count",
+                     main=base::paste(i,"- Number of quantified peptides"))
+        }
     }
-  }
 }
 
 #' Compare coefficients of variation of quantifications between data sets.
