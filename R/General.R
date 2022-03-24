@@ -498,18 +498,30 @@ add_annotations <- function(data_list,Annotations)
 
 #' Change sample (column) names of loaded MaxQuant or IceR data
 #' @param data_list List object containing loaded MaxQuant or IceR data
-#' @param sample_names Character vector of new names of same length as number of samples in MaxQuant or IceR data.
+#' @param sample_names Character vector of new names of same length as number of
+#' samples in MaxQuant or IceR data.
 #' @details Change sample names.
-#' @return List object containing loaded MaxQuant or IceR data with updated sample names.
+#' @return List object containing loaded MaxQuant or IceR data with updated
+#' sample names.
 #' @export
-set_sample_names <- function(data_list,sample_names)
-{
-  if("Quant_data" %in% names(data_list$Protein_level))colnames(data_list$Protein_level$Quant_data) <- sample_names
-  if("Quant_data_norm" %in% names(data_list$Protein_level))colnames(data_list$Protein_level$Quant_data_norm) <- sample_names
+set_sample_names <- function(data_list, sample_names){
+    if("Quant_data" %in% names(data_list$Protein_level)){
+        colnames(data_list$Protein_level$Quant_data) <- sample_names
+    }
 
-  if("Quant_data" %in% names(data_list$Peptide_level))colnames(data_list$Peptide_level$Quant_data) <- sample_names
-  if("Quant_data_norm" %in% names(data_list$Peptide_level))colnames(data_list$Peptide_level$Quant_data_norm) <- sample_names
-  return(data_list)
+    if("Quant_data_norm" %in% names(data_list$Protein_level)){
+        colnames(data_list$Protein_level$Quant_data_norm) <- sample_names
+    }
+
+    if("Quant_data" %in% names(data_list$Peptide_level)){
+        colnames(data_list$Peptide_level$Quant_data) <- sample_names
+    }
+
+    if("Quant_data_norm" %in% names(data_list$Peptide_level)){
+        colnames(data_list$Peptide_level$Quant_data_norm) <- sample_names
+    }
+
+    return(data_list)
 }
 
 #' Determine general identification and quantification numbers
