@@ -514,61 +514,65 @@ set_sample_names <- function(data_list,sample_names)
 
 #' Determine general identification and quantification numbers
 #' @param data_list List object containing loaded MaxQuant or IceR data
-#' @details Determine general numbers of the data set like number of proteins, number of peptides and number of missing values
-#' @return List object containing loaded MaxQuant or IceR data extended with general number information.
+#' @details Determine general numbers of the data set like number of proteins,
+#' number of peptides and number of missing values
+#' @return List object containing loaded MaxQuant or IceR data extended with
+#' general number information.
 #' @export
-determine_general_numbers <- function(data_list)
-{
-  if("Protein_level" %in% names(data_list))
-  {
-    ###number of proteins
-    temp <- plyr::count(data_list$Protein_level$Meta_data$Organism)
-    colnames(temp) <- c("Organism","Count")
-    data_list$Protein_level$num_prots <- temp
+determine_general_numbers <- function(data_list){
+    if("Protein_level" %in% names(data_list)){
+        # Number of proteins
+        temp <- plyr::count(data_list$Protein_level$Meta_data$Organism)
+        colnames(temp) <- c("Organism", "Count")
+        data_list$Protein_level$num_prots <- temp
 
-    ###number of proteins per samples
-    temp <- base::as.data.frame(t(as.matrix((colSums(!is.na(data_list$Protein_level$Quant_data))))))
-    data_list$Protein_level$num_prots_per_sample <- temp
+        # Number of proteins per samples
+        qdat <- data_list$Protein_level$Quant_data
+        temp <- base::as.data.frame(t(as.matrix((colSums(!is.na(qdat))))))
+        data_list$Protein_level$num_prots_per_sample <- temp
 
-    ###missing values on protein level - absolute and relative
-    temp <- c(length(which(is.na(data_list$Protein_level$Quant_data))),
-              length(which(is.na(data_list$Protein_level$Quant_data)))/(nrow(data_list$Protein_level$Quant_data)*ncol(data_list$Protein_level$Quant_data))*100)
-    names(temp) <- c("absolute","relative")
-    data_list$Protein_level$missing_values <- temp
-
-  }
-
-  if("Peptide_level" %in% names(data_list))
-  {
-    #check if we are currently looking at requant data
-    if("Meta_data_full" %in% names(data_list$Peptide_level))#requant data
-    {
-      ###missing values on peptide level - absolute and relative
-      temp <- c(length(which(is.na(data_list$Peptide_level$Quant_data[which(!grepl("_i|_d|_pmp",data_list$Peptide_level$Meta_data$Feature_name)),]))),
-                length(which(is.na(data_list$Peptide_level$Quant_data[which(!grepl("_i|_d|_pmp",data_list$Peptide_level$Meta_data$Feature_name)),])))/(nrow(data_list$Peptide_level$Quant_data[which(!grepl("_i|_d|_pmp",data_list$Peptide_level$Meta_data$Feature_name)),])*ncol(data_list$Peptide_level$Quant_data))*100)
-    }else #any other data
-    {
-      ###missing values on peptide level - absolute and relative
-      temp <- c(length(which(is.na(data_list$Peptide_level$Quant_data))),
-                length(which(is.na(data_list$Peptide_level$Quant_data)))/(nrow(data_list$Peptide_level$Quant_data)*ncol(data_list$Peptide_level$Quant_data))*100)
+        # Missing values on protein level - absolute and relative
+        len <- length(which(is.na(qdat)))
+        temp <- c(len, len / (nrow(qdat) * ncol(qdat)) * 100)
+        names(temp) <- c("absolute", "relative")
+        data_list$Protein_level$missing_values <- temp
     }
 
-    names(temp) <- c("absolute","relative")
-    data_list$Peptide_level$missing_values <- temp
+    if("Peptide_level" %in% names(data_list)){
+        # Check if we are currently looking at requant data
+        if("Meta_data_full" %in% names(data_list$Peptide_level)){ # Requant data
+            # Missing values on peptide level - absolute and relative
+            qdat <- data_list$Peptide_level$Quant_data
+            fnm <- data_list$Peptide_level$Meta_data$Feature_name
+            loc <- qdat[which(!grepl("_i|_d|_pmp", fnm)), ]
+            len <- length(which(is.na(loc)))
+            temp <- c(len, len / (nrow(loc) * ncol(qdat)) * 100)
+        }
 
-    ###number of peptides
-    temp <- data_list$Peptide_level$Meta_data
-    temp <- temp[!duplicated(temp$Sequence),]
-    temp <- plyr::count(temp$Organism)
-    colnames(temp) <- c("Organism","Count")
-    data_list$Peptide_level$num_peptides <- temp
+        else{ # Any other data
+            # Missing values on peptide level - absolute and relative
+            qdat <- data_list$Peptide_level$Quant_data
+            len <- length(which(is.na(qdat)))
+            temp <- c(len, len / (nrow(qdat) * ncol(qdat)) * 100)
+        }
 
-    ###number of peptides per samples
-    temp <- base::as.data.frame(t(as.matrix((colSums(!is.na(data_list$Peptide_level$Quant_data))))))
-    data_list$Peptide_level$num_peptides_per_sample <- temp
-  }
+        names(temp) <- c("absolute", "relative")
+        data_list$Peptide_level$missing_values <- temp
 
-  return(data_list)
+        # Number of peptides
+        temp <- data_list$Peptide_level$Meta_data
+        temp <- temp[!duplicated(temp$Sequence), ]
+        temp <- plyr::count(temp$Organism)
+        colnames(temp) <- c("Organism", "Count")
+        data_list$Peptide_level$num_peptides <- temp
+
+        # Number of peptides per samples
+        qdat <- data_list$Peptide_level$Quant_data
+        temp <- base::as.data.frame(t(as.matrix((colSums(!is.na(qdat))))))
+        data_list$Peptide_level$num_peptides_per_sample <- temp
+    }
+
+    return(data_list)
 }
 
 #' Compare general numbers between data sets
