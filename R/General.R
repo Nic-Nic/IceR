@@ -1,41 +1,37 @@
 .onAttach <- function(libname, pkgname) {
-
-  #library(utils)
-  if (!("cleaver" %in% rownames(utils::installed.packages()))) {
-    packageStartupMessage(
-      base::paste0(
-        "Please install `cleaver` by",
-        " `BiocManager::install('cleaver')`"
-      )
-    )
-  }
-  if (!("PECA" %in% rownames(utils::installed.packages()))) {
-    packageStartupMessage(
-      base::paste0(
-        "Please install `PECA` by",
-        " `BiocManager::install('PECA')`"
-      )
-    )
-  }
-
+    if(!("cleaver" %in% rownames(utils::installed.packages()))){
+        packageStartupMessage(base::paste0("Please install `cleaver` by ",
+                                           "`BiocManager::install('cleaver')`"))
+    }
+    if(!("PECA" %in% rownames(utils::installed.packages()))){
+        packageStartupMessage(base::paste0("Please install `PECA` by ",
+                                           "`BiocManager::install('PECA')`"))
+    }
 }
 
+'%!in%' <- function(x, y){
+    !('%in%'(x, y))
+}
 
-
-'%!in%' <- function(x,y)!('%in%'(x,y))
-'%not in%' <- function(x,y)!('%in%'(x,y))
+'%not in%' <- function(x, y){
+    !('%in%'(x, y))
+}
 
 #' Start GUI of IceR
-#' @details Graphical user interface for IceR. Allows setting up of an IceR run, specification of variable parameters and visualization of quality control plots after successful requantification.
+#' @details Graphical user interface for IceR. Allows setting up of an IceR run,
+#' specification of variable parameters and visualization of quality control
+#' plots after successful requantification.
 #' @return IceR results are stored in a user-specified folder.
 #' @export
-runIceR <- function() {
-  appDir <- system.file("shiny", "IceR_UI", package = "IceR")
-  if (appDir == "") {
-    stop("Could not find UI directory. Try re-installing `IceR`.", call. = FALSE)
-  }
+runIceR <- function(){
+    appDir <- system.file("shiny", "IceR_UI", package="IceR")
 
-  shiny::runApp(appDir, display.mode = "normal")
+    if(appDir == ""){
+        stop("Could not find UI directory. Try re-installing `IceR`.",
+             call.=FALSE)
+    }
+
+    shiny::runApp(appDir, display.mode="normal")
 }
 
 #' Save data.frames or list of data.frames as xlsx-files.
