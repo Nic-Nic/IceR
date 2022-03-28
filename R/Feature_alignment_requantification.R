@@ -8062,363 +8062,466 @@ peak_decision <- function(features_select,peak_quant,samples,s,RT_correction_fac
 #' @import randomForest
 #' @export
 #' @details Peak selection FDR algorithm for internal use
-Peak_selection_FDR <- function(num_features=500,features,samples,peaks,path_to_features,peak_quant,feature_with_background_intensity,peak_selected,delta_mz,delta_rt,peak_min_ion_count,num_peaks_store,alignment_scores_cutoff,n_cores,peak_decision,Alignment_scoring,seed=110519,plot=T)
-{
-  if(length(which(peaks$known == 1)) >= 10)
-  {
-    #suppressWarnings(suppressMessages(library(data.table,quietly = T)))
-    #suppressWarnings(suppressMessages(library(randomForest,quietly = T)))
-    #suppressWarnings(suppressMessages(library(mgcv,quietly = T)))
-    #select features for FDR estimation per sample
-    if(!is.na(seed))set.seed(seed)
-    temp_peaks <- peaks[which(peaks$peak == peaks$selected & peaks$known == 1 & !grepl("_i|_d",peaks$feature)),]
-    selection_feature <- sample(unique(temp_peaks$feature),length(unique(temp_peaks$feature)),replace = F)
-    selection_feature <- match(selection_feature,features$Feature_name)
-    selection_feature_per_sample <- list()
-
-    for(s in 1:length(samples))
-    {
-      temp_peaks_2 <- temp_peaks[which(temp_peaks$sample == samples[s]),]
-      temp_peaks_2 <- temp_peaks_2[match(features$Feature_name[selection_feature],temp_peaks_2$feature),]
-      sel <- which(!is.na(temp_peaks_2$known))[1:num_features]
-      if(any(is.na(sel)))sel <- sel[which(!is.na(sel))]
-      selection_feature_per_sample[[s]] <- selection_feature[sel]
-    }
-
-    #remove known peak location for selected features and samples and replace with predicted corrections based on models
-    features_select_FDR <- list()
-    features$Observed_mz <- as.character(features$Observed_mz)
-    features$Observed_RT <- as.character(features$Observed_RT)
-
-    setwd(base::paste(path_to_features,"/Temporary_files",sep=""))
-    e <- new.env()
-    load("Feature_alignment_QC_data.RData",envir = e)
-    median_feature_properties <- e$QC_data$mz_calibration_median_feature_properties
-    mz_correction_models <- e$QC_data$mz_calibration_models
-    RT_alignment_GAM_models <- e$QC_data$RT_calibration_GAM_models
-
-    for(s in 1:length(samples))
-    {
-      temp <- data.table::copy(features)
-      temp <- temp[selection_feature_per_sample[[s]],]
-      if(nrow(temp)>10)
-      {
-        #remove observed RT and mz
-        obs_rt <- (stringr::str_split(temp$Observed_RT,";",simplify = T))
-        obs_rt[,s] <- "NA"
-        obs_mz <- (stringr::str_split(temp$Observed_mz,";",simplify = T))
-        obs_mz[,s] <- "NA"
-        temp$Observed_mz <- apply(obs_mz,1,base::paste,collapse = ";")
-        #exchange mz calibration with prediction from model
-        select_model <- which(names(mz_correction_models) == samples[s])
-
-        features_select <- selection_feature_per_sample[[s]]
-
-        temp_data <- median_feature_properties[match(features_select,median_feature_properties$Feature),]
-
-        temp_data$Resolution <- 0
-
-        temp_data <- temp_data[which(rowSums(is.na(temp_data[,c("Retention.time","m.z","Charge","Resolution")])) == 0),]
-
-        if(length(select_model)>0)
-        {
-          if(nrow(temp_data) > 0)
-          {
-            prediction <- stats::predict(mz_correction_models[[select_model]], temp_data[,-1], type = "response")
-            if(any(is.na(prediction)))prediction[which(is.na(prediction))] <- 0
-
-            data.table::set(temp,as.integer(match(rownames(temp_data),rownames(temp))),as.integer(which(colnames(temp) == base::paste("mz_calibration.",samples[s],sep=""))),prediction)
-          }else
-          {
-            data.table::set(temp,as.integer(match(rownames(temp_data),rownames(temp))),as.integer(which(colnames(temp) == base::paste("mz_calibration.",samples[s],sep=""))),0)
-          }
-        }else
-        {
-          data.table::set(temp,as.integer(match(rownames(temp_data),rownames(temp))),as.integer(which(grepl("mz_calibration.",colnames(temp)))[s]),0)
-        }
-        #exchange RT calibration with prediction from model
-        select_model <- s
-        if(!is.null(RT_alignment_GAM_models[[select_model]]))
-        {
-          prediction <- stats::predict(RT_alignment_GAM_models[[select_model]], base::data.frame(x = temp$RT))
-          if(any(is.na(prediction)))prediction[which(is.na(prediction))] <- 0
-          data.table::set(temp,as.integer(1:nrow(temp)),as.integer(which(colnames(temp) == base::paste("RT_calibration.",samples[s],sep=""))),prediction)
-
-        }else
-        {
-          data.table::set(temp,as.integer(1:nrow(temp)),as.integer(which(colnames(temp) == base::paste("RT_calibration.",samples[s],sep=""))),0)
+Peak_selection_FDR <- function(num_features=500, features, samples, peaks,
+                               path_to_features, peak_quant,
+                               feature_with_background_intensity, peak_selected,
+                               delta_mz, delta_rt, peak_min_ion_count,
+                               num_peaks_store, alignment_scores_cutoff,
+                               n_cores, peak_decision, Alignment_scoring,
+                               seed=110519, plot=TRUE){
+    if(length(which(peaks$known == 1)) >= 10){
+        if(!is.na(seed)){
+            set.seed(seed)
         }
 
-        features_select_FDR[[s]] <- temp
-      }else
-      {
-        features_select_FDR[[s]] <- temp
-      }
-    }
+        # Select features for FDR estimation per sample
+        c1 <- peaks$peak == peaks$selected
+        c2 <- peaks$known == 1
+        c3 <- !grepl("_i|_d", peaks$feature)
+        temp_peaks <- peaks[which(c1 & c2 & c3), ]
+        selection_feature <- sample(unique(temp_peaks$feature),
+                                    length(unique(temp_peaks$feature)),
+                                    replace=FALSE)
+        selection_feature <- match(selection_feature, features$Feature_name)
+        selection_feature_per_sample <- list()
 
-    #prepare columns containing correction information
-    indices_RT_correction <- which(grepl("RT_calibration",colnames(features)))
-    indices_mz_correction <- which(grepl("mz_calibration",colnames(features)))
-    ordering_indices <- match(base::gsub("-",".",samples),base::gsub("RT_calibration\\.","",colnames(features)[indices_RT_correction]))
-    indices_RT_correction <- indices_RT_correction[ordering_indices]
-    indices_mz_correction <- indices_mz_correction[ordering_indices]
+        for(s in 1:length(samples)){
+            temp_peaks_2 <- temp_peaks[which(temp_peaks$sample == samples[s]), ]
+            userows <- match(features$Feature_name[selection_feature],
+                             temp_peaks_2$feature)
+            temp_peaks_2 <- temp_peaks_2[userows, ]
+            sel <- which(!is.na(temp_peaks_2$known))[1:num_features]
 
-    #reduce peak_quant information to only cover features selected for FDR calculation
-
-    #prepare only required peak quant data
-    peak_quant_reduced <- data.table::copy(peak_quant)
-    all_selected_features <- unique(unlist(selection_feature_per_sample))
-
-    for(p in 1:(num_peaks_store+1))
-    {
-      for(p2 in 1:length(peak_quant_reduced[[p]]))
-      {
-        peak_quant_reduced[[p]][[p2]] <- peak_quant_reduced[[p]][[p2]][all_selected_features,]
-      }
-    }
-
-    #suppressWarnings(suppressMessages(library(doSNOW,quietly = T)))
-
-    cl <- snow::makeCluster(n_cores)#as.numeric(Sys.getenv('NUMBER_OF_PROCESSORS')))
-    doSNOW::registerDoSNOW(cl)
-
-    start <- Sys.time()
-
-    res <- foreach::foreach(s=1:length(samples)) %dopar%
-      {
-        #suppressWarnings(suppressMessages(library(data.table,quietly = T)))
-
-        selection_feature <- selection_feature_per_sample[[s]]
-        if(length(selection_feature)>0)
-        {
-          max <- 1
-          pb <- tcltk::tkProgressBar(title = "Evaluate peak selection FDR",label=base::paste( round(0/max*100, 0),"% done"), min = 0,max = max, width = 300)
-
-          features_select_FDR_cur <- features_select_FDR[[s]]
-          #now perform peak decision for FDR_features and indicate if same peak was selected as before
-          peak_decision_same_without_peak_known <- vector("logical",length(selection_feature))
-
-          RT_correction_factors <- features_select_FDR_cur[,indices_RT_correction]
-          mz_correction_factors <- features_select_FDR_cur[,indices_mz_correction]
-          colnames(RT_correction_factors) <- samples
-          rownames(RT_correction_factors) <- features_select_FDR_cur$Feature_name
-          colnames(mz_correction_factors) <- samples
-          rownames(mz_correction_factors) <- features_select_FDR_cur$Feature_name
-
-          feature_with_background_intensity_select_FDR <- data.table::copy(feature_with_background_intensity)
-          peak_selected_select_FDR <- data.table::copy(peak_selected)
-
-          temp_dummy_df <-  data.table::data.table(Name=rep(0L,length(selection_feature)))
-          colnames(temp_dummy_df) <- samples[s]
-          close(pb)
-
-          peak_quant_temp <- data.table::copy(peak_quant_reduced)
-
-          for(p in 1:(num_peaks_store+1))
-          {
-            for(p2 in 1:length(peak_quant_temp[[p]]))
-            {
-              peak_quant_temp[[p]][[p2]] <- peak_quant_temp[[p]][[p2]][match(selection_feature,all_selected_features),]
+            if(any(is.na(sel))){
+                sel <- sel[which(!is.na(sel))]
             }
-          }
 
-          peak_quant_temp$Peak_1$correct_peak_with_background[,s] <- 0L
-
-          res_temp <- peak_decision(features_select = features_select_FDR_cur,
-                                    peak_quant = peak_quant_temp,
-                                    samples = samples,
-                                    s = s,
-                                    RT_correction_factors = RT_correction_factors,
-                                    mz_correction_factors = mz_correction_factors,
-                                    features_intensity_sample = temp_dummy_df,
-                                    Ioncount_sample = temp_dummy_df,
-                                    feature_with_background_intensity_sample = feature_with_background_intensity_select_FDR[selection_feature,s,drop=F],
-                                    Ioncount_with_background_sample = temp_dummy_df,
-                                    peak_selected_sample = peak_selected_select_FDR[selection_feature,s,drop=F],
-                                    delta_mz = delta_mz,
-                                    delta_rt = delta_rt,
-                                    peak_min_ion_count = peak_min_ion_count,
-                                    progress = T)
-
-          peak_decision_same_without_peak_known <- res_temp$peak_selected_sample[,1] == peak_selected[selection_feature,s]
-
-          data.table::set(feature_with_background_intensity_select_FDR,as.integer(selection_feature),as.integer(s),res_temp$feature_with_background_intensity_sample)
-          data.table::set(peak_selected_select_FDR,as.integer(selection_feature),as.integer(s),res_temp$peak_selected_sample)
-
-          names(peak_decision_same_without_peak_known) <- base::paste(features_select_FDR_cur$Feature_name,"_Sample_",s,sep="")
-
-          return(list(peak_decision_same_without_peak_known=peak_decision_same_without_peak_known,
-                      feature_with_background_intensity_select_FDR=feature_with_background_intensity_select_FDR,
-                      peak_selected_select_FDR=peak_selected_select_FDR))
-        }else
-        {
-          return(NULL)
+            selection_feature_per_sample[[s]] <- selection_feature[sel]
         }
 
-      }
-    snow::stopCluster(cl)
+        # Remove known peak location for selected features and samples and
+        # replace with predicted corrections based on models
+        features_select_FDR <- list()
+        features$Observed_mz <- as.character(features$Observed_mz)
+        features$Observed_RT <- as.character(features$Observed_RT)
 
+        setwd(base::paste(path_to_features, "/Temporary_files", sep=""))
+        e <- new.env()
+        load("Feature_alignment_QC_data.RData", envir=e)
+        qc <- e$QC_data
+        median_feature_properties <- qc$mz_calibration_median_feature_properties
+        mz_correction_models <- qc$mz_calibration_models
+        RT_alignment_GAM_models <- qc$RT_calibration_GAM_models
 
-    #determine how many false selections show large intensity difference and would not be removed by alignment scoring
-    results_peak_selection_FDR_all <- list()
-    max <- length(samples)
-    pb <- tcltk::tkProgressBar(title="Evaluate peak selection FDR",label=base::paste( round(0/max*100, 0),"% done"), min = 0,max = max, width = 300)
-    start_time <- Sys.time()
-    updatecounter <- 0
-    time_require <- 0
+        for(s in 1:length(samples)){
+            temp <- data.table::copy(features)
+            temp <- temp[selection_feature_per_sample[[s]], ]
 
-    for(s in 1:length(samples))
-    {
-      if(!is.null(res[[s]]))
-      {
-        peak_decision_same_without_peak_known <- res[[s]]$peak_decision_same_without_peak_known
-        peak_selected_select_FDR <- res[[s]]$peak_selected_select_FDR
-        feature_with_background_intensity_select_FDR <- res[[s]]$feature_with_background_intensity_select_FDR
-        selection_feature <- selection_feature_per_sample[[s]]
-        if(length(which(peak_decision_same_without_peak_known == F))>0L)
-        {
-          selections_all <- 1:length(peak_decision_same_without_peak_known)
+            if(nrow(temp) > 10){
+                # Remove observed RT and mz
+                obs_rt <- (stringr::str_split(temp$Observed_RT, ";",
+                                              simplify=TRUE))
+                obs_rt[, s] <- "NA"
+                obs_mz <- (stringr::str_split(temp$Observed_mz, ";",
+                                              simplify=TRUE))
+                obs_mz[, s] <- "NA"
+                temp$Observed_mz <- apply(obs_mz, 1, base::paste, collapse=";")
 
-          #compare quantification differences for all tests
-          compare_quant_results_for_wrong_decisions <- base::as.data.frame(matrix(ncol=2,nrow=length(selections_all)))
-          colnames(compare_quant_results_for_wrong_decisions) <- c("correct","wrong")
-          rownames(compare_quant_results_for_wrong_decisions) <- features_select_FDR[[s]]$Feature_name[selections_all]
-          compare_quant_results_for_wrong_decisions$correct <- as.numeric(compare_quant_results_for_wrong_decisions$correct)
-          compare_quant_results_for_wrong_decisions$wrong <- as.numeric(compare_quant_results_for_wrong_decisions$wrong)
-          for(i in selections_all)
-          {
-            ind <- i
-            data.table::set(compare_quant_results_for_wrong_decisions,as.integer(ind),as.integer(1:2),list(base::log2(10^feature_with_background_intensity_select_FDR[selection_feature[i],s]),
-                                                                                                           base::log2(10^feature_with_background_intensity[selection_feature[i],s])))
-          }
-          ##compare intensities of unbiased peak selection and correct peak
-          #determine distribution of quantification deviations between correct and unbiased selected peak
-          if(plot==T)
-          {
-            # plot(density(compare_quant_results_for_wrong_decisions$wrong-compare_quant_results_for_wrong_decisions$correct,na.rm=T),xlab="Intensity-masked / Intensity-true, log2",main=base::paste(samples[s],"- Deviation in selected peak quantification"))
-            # graphics::abline(v=0)
-            # graphics::abline(v=-1,lty=2,col="red")
-            # graphics::abline(v=1,lty=2,col="red")
+                # Exchange mz calibration with prediction from model
+                select_model <- which(names(mz_correction_models) == samples[s])
+                features_select <- selection_feature_per_sample[[s]]
+                loc <- match(features_select, median_feature_properties$Feature)
+                temp_data <- median_feature_properties[loc, ]
+                temp_data$Resolution <- 0
+                usecols <- c("Retention.time", "m.z", "Charge", "Resolution")
+                loc <- which(rowSums(is.na(temp_data[, usecols])) == 0)
+                temp_data <- temp_data[loc, ]
 
-            graphics::plot(compare_quant_results_for_wrong_decisions$correct,compare_quant_results_for_wrong_decisions$wrong,xlab="True peak quantification, log2",ylab="Masked peak quantification, log2",main=base::paste(samples[s],"- Error in quantification"))
-            graphics::abline(a=0,b=1)
-            graphics::abline(a=1,b=1,lty=2,col="red")
-            graphics::abline(a=-1,b=1,lty=2,col="red")
-          }
+                if(length(select_model) > 0){
+                    if(nrow(temp_data) > 0){
+                        mod <- mz_correction_models[[select_model]]
+                        prediction <- stats::predict(mod, temp_data[, -1],
+                                                     type="response")
 
-          #how many show deviation > 2 fold
-          wrong_peak_intensity_outlier <- abs(compare_quant_results_for_wrong_decisions$wrong-compare_quant_results_for_wrong_decisions$correct) > 1
+                        if(any(is.na(prediction))){
+                            prediction[which(is.na(prediction))] <- 0
+                        }
 
-          #finally visualize results
-          freq <- plyr::count(peak_decision_same_without_peak_known)
-          if(length(which(freq$x == F)) == 0)
-          {
-            freq <- rbind(freq,base::data.frame(x=F,freq=0))
-          }
-          if(length(which(freq$x == T)) == 0)
-          {
-            freq <- rbind(freq,base::data.frame(x=T,freq=0))
-          }
-          freq$rel <- freq$freq/sum(freq$freq)*100
+                        aux <- base::paste("mz_calibration.", samples[s],
+                                           sep="")
+                        loc <- which(colnames(temp) == aux)
+                        data.table::set(temp,
+                                        as.integer(match(rownames(temp_data),
+                                                         rownames(temp))),
+                                        as.integer(loc), prediction)
+                    }
 
-          plot_data <- c(freq$rel[which(freq$x==F)],
-                         length(which(wrong_peak_intensity_outlier == T))/sum(freq$freq)*100)
-          names(plot_data) <- c("Total",">2-fold intensity difference")
+                    else{
+                        aux <- base::paste("mz_calibration.", samples[s],
+                                           sep="")
+                        loc <- which(colnames(temp) == aux)
+                        data.table::set(temp,
+                                        as.integer(match(rownames(temp_data),
+                                                         rownames(temp))),
+                                        as.integer(loc), 0)
+                    }
+                }
 
-          results_peak_selection_FDR <- list(peak_decision_same_without_peak_known=peak_decision_same_without_peak_known,
-                                             compare_quant_results_for_wrong_decisions=compare_quant_results_for_wrong_decisions,
-                                             wrong_peak_intensity_outlier=wrong_peak_intensity_outlier,
-                                             plot_data=plot_data)
+                else{
+                    data.table::set(temp,
+                                    as.integer(match(rownames(temp_data),
+                                                     rownames(temp))),
+                                    as.integer(which(grepl("mz_calibration.",
+                                                           colnames(temp)))[s]),
+                                    0)
+                }
 
-        }else
-        {
-          freq <- plyr::count(peak_decision_same_without_peak_known)
-          if(length(which(freq$x == F)) == 0)
-          {
-            freq <- rbind(freq,base::data.frame(x=F,freq=0))
-          }
-          if(length(which(freq$x == T)) == 0)
-          {
-            freq <- rbind(freq,base::data.frame(x=T,freq=0))
-          }
-          freq$rel <- freq$freq/sum(freq$freq)*100
+                # Exchange RT calibration with prediction from model
+                select_model <- s
+                if(!is.null(RT_alignment_GAM_models[[select_model]])){
+                    mod <- RT_alignment_GAM_models[[select_model]]
+                    prediction <- stats::predict(mod,
+                                                 base::data.frame(x=temp$RT))
+                    if(any(is.na(prediction))){
+                        prediction[which(is.na(prediction))] <- 0
+                    }
 
-          plot_data <- c(freq$rel[which(freq$x==F)],
-                         0/sum(freq$freq)*100)
-          names(plot_data) <- c("Total",">2-fold intensity difference")
+                    aux <- base::paste("RT_calibration.", samples[s], sep="")
+                    loc <- which(colnames(temp) == aux)
+                    data.table::set(temp, as.integer(1:nrow(temp)),
+                                    as.integer(loc), prediction)
+                }
 
+                else{
+                    aux <- base::paste("RT_calibration.", samples[s], sep="")
+                    loc <- which(colnames(temp) == aux)
+                    data.table::set(temp, as.integer(1:nrow(temp)),
+                                    as.integer(loc), 0)
+                }
 
-          results_peak_selection_FDR <- list(peak_decision_same_without_peak_known=peak_decision_same_without_peak_known,
-                                             compare_quant_results_for_wrong_decisions=NULL,
-                                             wrong_peak_intensity_outlier=NULL,
-                                             plot_data=plot_data)
+                features_select_FDR[[s]] <- temp
+            }
+
+            else{
+                features_select_FDR[[s]] <- temp
+            }
         }
-        results_peak_selection_FDR_all[[s]] <- results_peak_selection_FDR
-      }else
-      {
-        results_peak_selection_FDR_all[[s]] <- NULL
-      }
 
+        # Prepare columns containing correction information
+        indices_RT_correction <- which(grepl("RT_calibration",
+                                             colnames(features)))
+        indices_mz_correction <- which(grepl("mz_calibration",
+                                             colnames(features)))
+        cols <- colnames(features)[indices_RT_correction]
+        ordering_indices <- match(base::gsub("-", ".", samples),
+                                  base::gsub("RT_calibration\\.", "",  cols))
+        indices_RT_correction <- indices_RT_correction[ordering_indices]
+        indices_mz_correction <- indices_mz_correction[ordering_indices]
 
-      updatecounter <- updatecounter + 1
-      if(updatecounter >= 1)
-      {
-        time_elapsed <- difftime(Sys.time(),start_time,units="secs")
-        time_require <- (time_elapsed/(s/max))*(1-(s/max))
-        td <- lubridate::seconds_to_period(time_require)
-        time_require <- sprintf('%02d:%02d:%02d', td@hour, lubridate::minute(td), round(lubridate::second(td),digits=0))
+        # Reduce peak_quant information to only cover features selected for FDR
+        # calculation
 
+        # Prepare only required peak quant data
+        peak_quant_reduced <- data.table::copy(peak_quant)
+        all_selected_features <- unique(unlist(selection_feature_per_sample))
+
+        for(p in 1:(num_peaks_store + 1)){
+            for(p2 in 1:length(peak_quant_reduced[[p]])){
+                pk <- peak_quant_reduced[[p]][[p2]]
+                peak_quant_reduced[[p]][[p2]] <- pk[all_selected_features, ]
+            }
+        }
+
+        cl <- snow::makeCluster(n_cores)
+        doSNOW::registerDoSNOW(cl)
+
+        start <- Sys.time()
+
+        res <- foreach::foreach(s=1:length(samples)) %dopar% {
+            selection_feature <- selection_feature_per_sample[[s]]
+
+            if(length(selection_feature) > 0){
+                max <- 1
+                pct <- round(0 / max * 100, 0)
+                pb <- tcltk::tkProgressBar(title="Evaluate peak selection FDR",
+                                           label=base::paste(pct, "% done"),
+                                           min=0, max=max, width=300)
+
+                ft_sel_FDR_cur <- features_select_FDR[[s]]
+
+                # Now perform peak decision for FDR_features and indicate if
+                # same peak was selected as before
+                len <- length(selection_feature)
+                pk_dec_sme_wo_pk_knwn <- vector("logical", len)
+                RT_correction_factors <- ft_sel_FDR_cur[, indices_RT_correction]
+                mz_correction_factors <- ft_sel_FDR_cur[, indices_mz_correction]
+                colnames(RT_correction_factors) <- samples
+                rownames(RT_correction_factors) <- ft_sel_FDR_cur$Feature_name
+                colnames(mz_correction_factors) <- samples
+                rownames(mz_correction_factors) <- ft_sel_FDR_cur$Feature_name
+
+                # Alias
+                ft_w_bk_ity <- feature_with_background_intensity
+
+                ft_w_bkgrd_inty_sel_FDR <- data.table::copy(ft_w_bk_ity)
+                peak_selected_select_FDR <- data.table::copy(peak_selected)
+
+                name <- rep(0L, length(selection_feature))
+                temp_dummy_df <-  data.table::data.table(Name=name)
+                colnames(temp_dummy_df) <- samples[s]
+                close(pb)
+
+                peak_quant_temp <- data.table::copy(peak_quant_reduced)
+
+                for(p in 1:(num_peaks_store + 1)){
+                    for(p2 in 1:length(peak_quant_temp[[p]])){
+                        pk <- peak_quant_temp[[p]][[p2]]
+                        loc <- match(selection_feature, all_selected_features)
+                        peak_quant_temp[[p]][[p2]] <- pk[loc, ]
+                    }
+                }
+
+                peak_quant_temp$Peak_1$correct_peak_with_background[, s] <- 0L
+
+                usefeat <- ft_w_bkgrd_inty_sel_FDR[selection_feature, s,
+                                                   drop=FALSE]
+                usepeak <- peak_selected_select_FDR[selection_feature, s,
+                                                    drop=FALSE]
+                res_temp <- peak_decision(
+                    features_select=ft_sel_FDR_cur,
+                    peak_quant=peak_quant_temp,
+                    samples=samples,
+                    s=s,
+                    RT_correction_factors=RT_correction_factors,
+                    mz_correction_factors=mz_correction_factors,
+                    features_intensity_sample=temp_dummy_df,
+                    Ioncount_sample=temp_dummy_df,
+                    feature_with_background_intensity_sample=usefeat,
+                    Ioncount_with_background_sample=temp_dummy_df,
+                    peak_selected_sample=usepeak,
+                    delta_mz=delta_mz,
+                    delta_rt=delta_rt,
+                    peak_min_ion_count=peak_min_ion_count,
+                    progress=TRUE
+                )
+
+                c1 <- res_temp$peak_selected_sample[, 1]
+                c2 <- peak_selected[selection_feature, s]
+                pk_dec_sme_wo_pk_knwn <- c1 == c2
+
+                usefeat <- res_temp$feature_with_background_intensity_sample
+                data.table::set(ft_w_bkgrd_inty_sel_FDR,
+                                as.integer(selection_feature),
+                                as.integer(s), usefeat)
+                data.table::set(peak_selected_select_FDR,
+                                as.integer(selection_feature),
+                                as.integer(s), res_temp$peak_selected_sample)
+
+                samp <- base::paste(ft_sel_FDR_cur$Feature_name, "_Sample_", s,
+                                    sep="")
+                names(pk_dec_sme_wo_pk_knwn) <- samp
+
+                # peak_decision_same_without_peak_known = pk_dec_sme_wo_pk_knwn
+                return(list(pk_dec_sme_wo_pk_knwn=pk_dec_sme_wo_pk_knwn,
+                            ft_w_bkgrd_inty_sel_FDR=ft_w_bkgrd_inty_sel_FDR,
+                            peak_selected_select_FDR=peak_selected_select_FDR))
+            }
+
+            else{
+                return(NULL)
+            }
+        }
+
+        snow::stopCluster(cl)
+
+        # Determine how many false selections show large intensity difference
+        # and would not be removed by alignment scoring
+        results_peak_selection_FDR_all <- list()
+        max <- length(samples)
+        prg <- base::paste(round(0 / max * 100, 0), "% done")
+        pb <- tcltk::tkProgressBar(title="Evaluate peak selection FDR",
+                                   label=prg, min=0, max=max, width=300)
+        start_time <- Sys.time()
         updatecounter <- 0
-        tcltk::setTkProgressBar(pb, s, label=base::paste( round(s/max*100, 0)," % done (",s,"/",max,", Time require: ",time_require,")",sep = ""))
-      }
+        time_require <- 0
+
+        for(s in 1:length(samples)){
+            if(!is.null(res[[s]])){
+                pk_dec_sme_wo_pk_knwn <- res[[s]]$pk_dec_sme_wo_pk_knwn
+                peak_selected_select_FDR <- res[[s]]$peak_selected_select_FDR
+                ft_w_bkgrd_inty_sel_FDR <- res[[s]]$ft_w_bkgrd_inty_sel_FDR
+                selection_feature <- selection_feature_per_sample[[s]]
+
+                if(length(which(pk_dec_sme_wo_pk_knwn == F)) > 0L){
+                    selections_all <- 1:length(pk_dec_sme_wo_pk_knwn)
+
+                    # Compare quantification differences for all tests
+                    mat <- matrix(ncol=2, nrow=length(selections_all))
+                    quant_res_4wrong <- base::as.data.frame(mat)
+                    colnames(quant_res_4wrong) <- c("correct", "wrong")
+                    ids <- features_select_FDR[[s]]$Feature_name[selections_all]
+                    rownames(quant_res_4wrong) <- ids
+                    corr <- as.numeric(quant_res_4wrong$correct)
+                    quant_res_4wrong$correct <- corr
+                    wrng <- as.numeric(quant_res_4wrong$wrong)
+                    quant_res_4wrong$wrong <- wrng
+
+                    for(i in selections_all){
+                        ft <- selection_feature[i]
+                        int_sel <- ft_w_bkgrd_inty_sel_FDR[ft, s]
+                        ft_bck <- feature_with_background_intensity[ft, s]
+                        data.table::set(quant_res_4wrong, as.integer(i),
+                                        as.integer(1:2),
+                                        list(base::log2(10^int_sel),
+                                        base::log2(10^ft_bck)))
+                    }
+                    # Compare intensities of unbiased peak selection and correct
+                    # peak
+                    # Determine distribution of quantification deviations
+                    # between correct and unbiased selected peak
+                    if(plot == TRUE){
+                        title <- base::paste(samples[s],
+                                             "- Error in quantification")
+                        graphics::plot(quant_res_4wrong$correct,
+                                       quant_res_4wrong$wrong,
+                                       xlab="True peak quantification, log2",
+                                       ylab="Masked peak quantification, log2",
+                                       main=title)
+                        graphics::abline(a=0, b=1)
+                        graphics::abline(a=1, b=1, lty=2, col="red")
+                        graphics::abline(a=-1, b=1, lty=2, col="red")
+                    }
+
+                    # How many show deviation > 2 fold
+                    dif <- quant_res_4wrong$wrong - quant_res_4wrong$correct
+                    wrong_pk_inty_outlier <- abs(dif) > 1
+
+                    # Finally visualize results
+                    freq <- plyr::count(pk_dec_sme_wo_pk_knwn)
+
+                    if(length(which(freq$x == FALSE)) == 0){
+                        freq <- rbind(freq, base::data.frame(x=FALSE, freq=0))
+                    }
+
+                    if(length(which(freq$x == TRUE)) == 0){
+                        freq <- rbind(freq, base::data.frame(x=TRUE, freq=0))
+                    }
+
+                    freq$rel <- freq$freq / sum(freq$freq) * 100
+
+                    len <- length(which(wrong_pk_inty_outlier == TRUE))
+                    plot_data <- c(freq$rel[which(freq$x == FALSE)],
+                                   len / sum(freq$freq) * 100)
+                    names(plot_data) <- c("Total",
+                                          ">2-fold intensity difference")
+
+                    results_peak_selection_FDR <- list(
+                        pk_dec_sme_wo_pk_knwn=pk_dec_sme_wo_pk_knwn,
+                        quant_res_4wrong=quant_res_4wrong,
+                        wrong_pk_inty_outlier=wrong_pk_inty_outlier,
+                        plot_data=plot_data
+                    )
+                }
+
+                else{
+                    freq <- plyr::count(pk_dec_sme_wo_pk_knwn)
+
+                    if(length(which(freq$x == FALSE)) == 0){
+                        freq <- rbind(freq, base::data.frame(x=FALSE, freq=0))
+                    }
+
+                    if(length(which(freq$x == TRUE)) == 0){
+                        freq <- rbind(freq,base::data.frame(x=TRUE, freq=0))
+                    }
+
+                    freq$rel <- freq$freq / sum(freq$freq) * 100
+
+                    plot_data <- c(freq$rel[which(freq$x == FALSE)],
+                                   0 / sum(freq$freq) * 100)
+                    names(plot_data) <- c("Total",
+                                          ">2-fold intensity difference")
+
+                    results_pk_selection_FDR <- list(
+                        pk_dec_sme_wo_pk_knwn=pk_dec_sme_wo_pk_knwn,
+                        quant_res_4wrong=NULL,
+                        wrong_pk_inty_outlier=NULL,
+                        plot_data=plot_data
+                    )
+                }
+
+                results_peak_selection_FDR_all[[s]] <- results_pk_selection_FDR
+            }
+
+            else{
+                results_peak_selection_FDR_all[[s]] <- NULL
+            }
+
+            updatecounter <- updatecounter + 1
+            if(updatecounter >= 1){
+                time_elapsed <- difftime(Sys.time(), start_time, units="secs")
+                time_require <- (time_elapsed / (s / max)) * (1 - (s / max))
+                td <- lubridate::seconds_to_period(time_require)
+                time_require <- sprintf('%02d:%02d:%02d', td@hour,
+                                        lubridate::minute(td),
+                                        round(lubridate::second(td), digits=0))
+                updatecounter <- 0
+                lbl <- base::paste(round(s / max * 100, 0), " % done (", s,
+                                   "/", max, ", Time require: ", time_require,
+                                   ")", sep="")
+                tcltk::setTkProgressBar(pb, s, label=lbl)
+            }
+        }
+
+        close(pb)
+
+        # Plot results over all samples
+        Total_FDR <- NULL
+        Large_Intensity_delta_FDR <- NULL
+        for(s in 1:length(samples)){
+            res <- results_peak_selection_FDR_all[[s]]
+
+            # Require at least 100 identified peptides in a sample
+            if(length(res$pk_dec_sme_wo_pk_knwn) >= 100){
+                Total_FDR <- append(Total_FDR, res$plot_data[1])
+                Large_Intensity_delta_FDR <- append(Large_Intensity_delta_FDR,
+                                                    res$plot_data[2])
+            }
+
+            else{
+                print(base::paste(samples[s], ": Not enough known peaks for ",
+                                  "peak selection FDR estimation", sep=""))
+                Total_FDR <- append(Total_FDR, NA)
+                Large_Intensity_delta_FDR <- append(Large_Intensity_delta_FDR,
+                                                    NA)
+            }
+        }
+
+        names(Total_FDR) <- samples
+        names(Large_Intensity_delta_FDR) <- samples
+
+        if(plot == TRUE){
+            ylim <- c(0, ifelse(max(Large_Intensity_delta_FDR, na.rm=TRUE) < 5,
+                                5, max(Large_Intensity_delta_FDR, na.rm=TRUE)))
+            title <- base::paste("Peak selection FDR - > 2-fold intensity ",
+                                 "difference\nBased on n=", num_features,
+                                 " random draws", sep="")
+            p <- Barplots(Large_Intensity_delta_FDR, AvgLine=TRUE,
+                          digits_average=1, Name=samples, xlab="",
+                          ylab="FDR [%]", main=title, shownumbers=FALSE,
+                          ylim=ylim)
+            graphics::abline(h=5, lty=2, col="red")
+        }
     }
-    close(pb)
 
-    ##plot results over all samples
-    Total_FDR <- NULL
-    Large_Intensity_delta_FDR <- NULL
-    for(s in 1:length(samples))
-    {
-      if(length(results_peak_selection_FDR_all[[s]]$peak_decision_same_without_peak_known) >= 100) ###require at least 100 identified peptides in a sample
-      {
-        Total_FDR <- append(Total_FDR,results_peak_selection_FDR_all[[s]]$plot_data[1])
-        Large_Intensity_delta_FDR <- append(Large_Intensity_delta_FDR,results_peak_selection_FDR_all[[s]]$plot_data[2])
-      }else
-      {
-        print(base::paste(samples[s],": Not enough known peaks for peak selection FDR estimation",sep=""))
-        Total_FDR <- append(Total_FDR,NA)
-        Large_Intensity_delta_FDR <- append(Large_Intensity_delta_FDR,NA)
-      }
-
-    }
-    names(Total_FDR) <- samples
-    names(Large_Intensity_delta_FDR) <- samples
-
-    if(plot == T)
-    {
-      # ylim <- c(0,ifelse(max(Total_FDR,na.rm=T)<5,5,max(Total_FDR,na.rm=T)))
-      # p <- Barplots(Total_FDR,AvgLine = T,digits_average = 1,Name = samples,xlab = "",ylab="FDR [%]",main = "Peak selection FDR - Total",shownumbers = F,ylim=ylim)
-      # graphics::abline(h=5,lty=2,col="red")
-
-      ylim <- c(0,ifelse(max(Large_Intensity_delta_FDR,na.rm=T)<5,5,max(Large_Intensity_delta_FDR,na.rm=T)))
-      p <- Barplots(Large_Intensity_delta_FDR,AvgLine = T,digits_average = 1,Name = samples,xlab = "",ylab="FDR [%]",main = base::paste("Peak selection FDR - > 2-fold intensity difference\nBased on n=",num_features," random draws",sep=""),shownumbers = F,ylim=ylim)
-      graphics::abline(h=5,lty=2,col="red")
-
+    else{
+        print(paste("Warning: The true peak for too few features is known. ",
+                    "Skipping peak selection FDR estimation.", sep=""))
+        results_peak_selection_FDR_all <- NA
+        Total_FDR <- NA
+        Large_Intensity_delta_FDR <- NA
     }
 
-  }else
-  {
-    print("Warning: The true peak for too few features is known. Skipping peak selection FDR estimation.")
-    results_peak_selection_FDR_all <- NA
-    Total_FDR <- NA
-    Large_Intensity_delta_FDR <- NA
-  }
-
-
-  return(list(results_peak_selection_FDR_all=results_peak_selection_FDR_all,
-              Total_FDR=Total_FDR,
-              Large_Intensity_delta_FDR=Large_Intensity_delta_FDR))
-
+    return(list(results_peak_selection_FDR_all=results_peak_selection_FDR_all,
+                Total_FDR=Total_FDR,
+                Large_Intensity_delta_FDR=Large_Intensity_delta_FDR))
 }
-
-
