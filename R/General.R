@@ -63,135 +63,199 @@ SaveExcel = function(Data,File)
 }
 
 #' Load MaxQuant result files
-#' @param path Optional path to folder containing MaxQuant outputs. By default set to NA. In this case a file browser is opened. If path is directly specified, it has to end with \\
-#' @param min_pep_count Minimal required number of quantified peptides per protein. By default set to 1.
-#' @param min_pep_count_criteria Criteria how to count quantified peptides per protein. Either all or only unique peptides are counted. By default set to "all".
-#' @param remove_contaminants Boolean value indicating if contaminants should be removed. By default set to T.
-#' @param remove_reverse Boolean value indicating if reverse hits should be removed. By default set to T.
-#' @param intensity_used Specifying which protein quantification data should be used. Selection between "LFQ intensity", "iBAQ" or "Intensity". By default set to "LFQ intensity". Requires corresponding quantification results to be calculated by MaxQuant and stored in respective columns.
+#' @param path Optional path to folder containing MaxQuant outputs. By default
+#' set to NA. In this case a file browser is opened. If path is directly
+#' specified, it has to end with \\
+#' @param min_pep_count Minimal required number of quantified peptides per
+#' protein. By default set to 1.
+#' @param min_pep_count_criteria Criteria how to count quantified peptides per
+#' protein. Either all or only unique peptides are counted. By default set to
+#' '"all".
+#' @param remove_contaminants Boolean value indicating if contaminants should be
+#' removed. By default set to T.
+#' @param remove_reverse Boolean value indicating if reverse hits should be
+#' removed. By default set to T.
+#' @param intensity_used Specifying which protein quantification data should be
+#' used. Selection between "LFQ intensity", "iBAQ" or "Intensity". By default
+#' set to "LFQ intensity". Requires corresponding quantification results to be
+#' calculated by MaxQuant and stored in respective columns.
 #' @details Wrapper function to load and filter MaxQuant results.
-#' @return List object containing protein and peptide quantification information in sub-lists named Protein_level and Peptide_level, respectively.
+#' @return List object containing protein and peptide quantification information
+#' in sub-lists named Protein_level and Peptide_level, respectively.
 #' @export
-load_MaxQ_data <- function(path=NA,min_pep_count=1,min_pep_count_criteria=c("all","unique"),remove_contaminants=T,remove_reverse=T,intensity_used=c("LFQ intensity","iBAQ","Intensity"))
-{
-  options(warn=-1)
-  min_pep_count_criteria <- min_pep_count_criteria[1]
-  if(is.na(path))
-  {
-    print("Select a file in the MaxQ output folder")
-    path_to_MaxQ <- base::file.choose()
-    temp <- unlist(gregexpr("\\\\",path_to_MaxQ))
-    path_to_MaxQ <- base::substr(path_to_MaxQ,1,temp[length(temp)])
-    data_protein <- utils::read.table(base::paste(path_to_MaxQ,"proteinGroups.txt",sep=""),sep="\t",header=T)
-    data_peptide <- utils::read.table(base::paste(path_to_MaxQ,"peptides.txt",sep=""),sep="\t",header=T)
-    print(base::paste("Selected path to MaxQuant output:",path_to_MaxQ))
-  }else
-  {
-    path_to_MaxQ <- path
-    data_protein <- utils::read.table(base::paste(path_to_MaxQ,"proteinGroups.txt",sep=""),sep="\t",header=T)
-    data_peptide <- utils::read.table(base::paste(path_to_MaxQ,"peptides.txt",sep=""),sep="\t",header=T)
-  }
+load_MaxQ_data <- function(path=NA, min_pep_count=1,
+                           min_pep_count_criteria=c("all", "unique"),
+                           remove_contaminants=TRUE, remove_reverse=TRUE,
+                           intensity_used=c("LFQ intensity", "iBAQ",
+                                            "Intensity")){
+    options(warn=-1)
+    min_pep_count_criteria <- min_pep_count_criteria[1]
+
+    if(is.na(path)){
+        print("Select a file in the MaxQ output folder")
+        path_to_MaxQ <- base::file.choose()
+        temp <- unlist(gregexpr("\\\\", path_to_MaxQ))
+        path_to_MaxQ <- base::substr(path_to_MaxQ, 1, temp[length(temp)])
+        data_protein <- utils::read.table(base::paste(path_to_MaxQ,
+                                                      "proteinGroups.txt",
+                                                      sep=""),
+                                          sep="\t", header=TRUE)
+        data_peptide <- utils::read.table(base::paste(path_to_MaxQ,
+                                                      "peptides.txt", sep=""),
+                                          sep="\t", header=TRUE)
+        print(base::paste("Selected path to MaxQuant output:", path_to_MaxQ))
+    }
+
+    else{
+        path_to_MaxQ <- path
+        data_protein <- utils::read.table(base::paste(path_to_MaxQ,
+                                                      "proteinGroups.txt",
+                                                      sep=""), sep="\t",
+                                          header=TRUE)
+        data_peptide <- utils::read.table(base::paste(path_to_MaxQ,
+                                                      "peptides.txt", sep=""),
+                                          sep="\t", header=TRUE)
+    }
 
 
-  ###Remove reverse hits and contaminants?
-  data_protein <- data_protein[which(data_protein$Only.identified.by.site != "+"),]
+    # Remove reverse hits and contaminants?
+    userows <- which(data_protein$Only.identified.by.site != "+")
+    data_protein <- data_protein[userows, ]
 
-  if(remove_contaminants == T)
-  {
-    data_protein <- data_protein[which(data_protein$Potential.contaminant != "+"),]
-    data_peptide <- data_peptide[which(data_peptide$Potential.contaminant != "+"),]
-  }
-  if(remove_reverse == T)
-  {
-    data_protein <- data_protein[which(data_protein$Reverse != "+"),]
-    data_peptide <- data_peptide[which(data_peptide$Reverse != "+"),]
-  }
-  ###Extract quant columns
-  intensity_used <- base::gsub(" ","\\\\.",intensity_used[1])
+    if(remove_contaminants == TRUE){
+        userows <- which(data_protein$Potential.contaminant != "+")
+        data_protein <- data_protein[userows, ]
+        data_peptide <- data_peptide[userows, ]
+    }
 
-  cols_sel <- which(grepl(base::paste(intensity_used,"\\.",sep=""),colnames(data_protein)))
-  if (length(cols_sel) == 0) stop("The selected quantification column is not availble. Please specify the correct quantification column to be used using the parameter `intensity_used`")
+    if(remove_reverse == TRUE){
+        userows <- which(data_protein$Reverse != "+")
+        data_protein <- data_protein[userows, ]
+        data_peptide <- data_peptide[userows, ]
+    }
 
-  data_protein_quant <- data_protein[,which(grepl(base::paste(intensity_used,"\\.",sep=""),colnames(data_protein)))]
-  data_peptide_quant <- data_peptide[,which(grepl("Intensity\\.",colnames(data_peptide)))]
+    # Extract quant columns
+    intensity_used <- base::gsub(" ", "\\\\.", intensity_used[1])
 
-  ###Extract number of quantified peptides per protein and sample
-  if(min_pep_count_criteria == "all")data_protein_peptide_count <- data_protein[,which(grepl("^Peptides\\.",colnames(data_protein)))]
-  if(min_pep_count_criteria == "unique")data_protein_peptide_count <- data_protein[,which(grepl("^Unique\\.peptides\\.",colnames(data_protein)))]
+    cols_sel <- which(grepl(base::paste(intensity_used, "\\.", sep=""),
+                            colnames(data_protein)))
+    if(length(cols_sel) == 0){
+        msg <- paste("The selected quantification column is not availble.",
+                     "Please specify the correct quantification column to be",
+                     "used using the parameter `intensity_used`", sep=' ')
+        stop(msg)
+    }
 
-  ###missing values are marked as NA
-  data_protein_quant[data_protein_quant == 0] <- NA
-  data_peptide_quant[data_peptide_quant == 0] <- NA
+    data_protein_quant <- data_protein[, which(grepl(base::paste(intensity_used,
+                                                                 "\\.", sep=""),
+                                                     colnames(data_protein)))]
+    data_peptide_quant <- data_peptide[, which(grepl("Intensity\\.",
+                                                     colnames(data_peptide)))]
 
-  ###log2 transform quant data
-  data_protein_quant <- base::log2(data_protein_quant)
-  data_peptide_quant <- base::log2(data_peptide_quant)
+    # Extract number of quantified peptides per protein and sample
+    if(min_pep_count_criteria == "all"){
+        usecols <- which(grepl("^Peptides\\.", colnames(data_protein)))
+        data_protein_peptide_count <- data_protein[, usecols]
+    }
 
-  ###prepare additional information per row on protein level
-  data_protein_info <- base::data.frame(Gene_name=stringr::str_split(data_protein$Gene.names,";",simplify = T)[,1],
-                                  ID=stringr::str_split(data_protein$Majority.protein.IDs,";",simplify = T)[,1],
-                                  Organism=base::substr(data_protein$Fasta.headers,regexpr("OS=",data_protein$Fasta.headers)+3,regexpr("GN=",data_protein$Fasta.headers)-2),
-                                  num_peptides=data_protein$Peptides,
-                                  num_unique_peptides=data_protein$Unique.peptides,
-                                  Gene_names_all=data_protein$Gene.names,
-                                  IDs_major=data_protein$Majority.protein.IDs)
-  data_protein_info$Gene_name <- as.character(data_protein_info$Gene_name)
-  data_protein_info$ID <- as.character(data_protein_info$ID)
-  data_protein_info$Organism <- as.character(data_protein_info$Organism)
-  data_protein_info$Gene_names_all <- as.character(data_protein_info$Gene_names_all)
-  data_protein_info$IDs_major <- as.character(data_protein_info$IDs_major)
-  if(any(data_protein_info$Gene_name == ""))
-  {
-    data_protein_info$Gene_name <- as.character(data_protein_info$Gene_name)
-    data_protein_info$Gene_name[which(data_protein_info$Gene_name == "")] <- "Unassigned"
-  }
-  data_protein_info$Gene_name <- base::make.unique(data_protein_info$Gene_name)
+    if(min_pep_count_criteria == "unique"){
+        usecols <- which(grepl("^Unique\\.peptides\\.", colnames(data_protein)))
+        data_protein_peptide_count <- data_protein[, usecols]
+    }
 
-  ###prepare additional information per row on peptide level
-  data_peptide_info <- base::data.frame(Sequence=data_peptide$Sequence,
-                                  Gene_name=stringr::str_split(data_peptide$Gene.names,";",simplify = T)[,1],
-                                  ID=stringr::str_split(data_peptide$Leading.razor.protein,";",simplify = T)[,1],
-                                  Organism=data_protein_info$Organism[match(stringr::str_split(data_peptide$Leading.razor.protein,";",simplify = T)[,1],data_protein_info$ID)],
-                                  Gene_names_all=data_peptide$Gene.names,
-                                  IDs_major=data_peptide$Proteins,
-                                  Start.position=data_peptide$Start.position,
-                                  End.position=data_peptide$End.position,
-                                  Score=data_peptide$Score,
-                                  PEP=data_peptide$PEP)
+    # Missing values are marked as NA
+    data_protein_quant[data_protein_quant == 0] <- NA
+    data_peptide_quant[data_peptide_quant == 0] <- NA
 
-  if(any(data_peptide_info$Gene_name == ""))
-  {
-    data_peptide_info$Gene_name <- as.character(data_peptide_info$Gene_name)
-    data_peptide_info$Gene_name[which(data_peptide_info$Gene_name == "")] <- "Unassigned"
-  }
+    # log2 transform quant data
+    data_protein_quant <- base::log2(data_protein_quant)
+    data_peptide_quant <- base::log2(data_peptide_quant)
 
-  if(any(is.na(data_peptide_info$Organism)))
-  {
-    data_peptide_info$Organism[is.na(data_peptide_info$Organism)] <- ""
-  }
+    # Prepare additional information per row on protein level
+    gnames <- as.character(stringr::str_split(data_protein$Gene.names, ";",
+                                              simplify=TRUE)[, 1])
+    ids <- as.character(stringr::str_split(data_protein$Majority.protein.IDs,
+                                           ";", simplify=TRUE)[, 1])
+    org <- as.character(base::substr(data_protein$Fasta.headers,
+                                     regexpr("OS=",
+                                             data_protein$Fasta.headers) + 3,
+                                     regexpr("GN=",
+                                             data_protein$Fasta.headers) - 2))
+    npeps <- data_protein$Peptides
+    nunpeps <- data_protein$Unique.peptides
+    gnames_all <- as.character(data_protein$Gene.names)
+    ids_maj < as.character(data_protein$Majority.protein.IDs)
+    data_protein_info <- base::data.frame(Gene_name=gnames, ID=ids,
+                                          Organism=org, num_peptides=npeps,
+                                          num_unique_peptides=nunpeps,
+                                          Gene_names_all=gnames_all,
+                                          IDs_major=ids_maj)
 
-  ###make rownames of peptide and protein quant more readable
-  rownames(data_protein_quant) <- data_protein_info$Gene_name
-  rownames(data_protein_peptide_count) <- data_protein_info$Gene_name
-  rownames(data_peptide_quant) <- data_peptide_info$Sequence
+    if(any(data_protein_info$Gene_name == "")){
+        loc <- which(data_protein_info$Gene_name == "")
+        data_protein_info$Gene_name[loc] <- "Unassigned"
+    }
 
-  ###check if all protein quantifications were based on at least min_pep_count numbers of peptides
-  data_protein_quant[data_protein_peptide_count < min_pep_count] <- NA
+    unids <- base::make.unique(data_protein_info$Gene_name)
+    data_protein_info$Gene_name <- unids
 
-  ##remove rows which are showing only missing values
-  sel <- which(rowSums(!is.na(data_protein_quant)) > 0)
-  data_protein_quant <- data_protein_quant[sel,]
-  data_protein_info <- data_protein_info[sel,]
-  data_protein_peptide_count <- data_protein_peptide_count[sel,]
+    # Prepare additional information per row on peptide level
+    gnames <- as.character(stringr::str_split(data_peptide$Gene.names, ";",
+                                              simplify=TRUE)[, 1])
+    ids <- as.character(stringr::str_split(data_peptide$Leading.razor.protein,
+                                           ";", simplify=TRUE)[, 1])
+    loc <- match(stringr::str_split(data_peptide$Leading.razor.protein, ";",
+                                    simplify=TRUE)[, 1], data_protein_info$ID)
+    org <- as.character(data_protein_info$Organism[loc])
+    gnames_all <- as.character(data_peptide$Gene.names)
+    ids_maj <- as.character(data_peptide$Proteins)
+    spos <- data_peptide$Start.position
+    epos <- data_peptide$End.position
+    data_peptide_info <- base::data.frame(Sequence=data_peptide$Sequence,
+                                          Gene_name=gnames, ID=ids,
+                                          Organism=org,
+                                          Gene_names_all=gnames_all,
+                                          IDs_major=ids_maj,
+                                          Start.position=spos,
+                                          End.position=epos,
+                                          Score=data_peptide$Score,
+                                          PEP=data_peptide$PEP)
 
-  sel <- which(rowSums(!is.na(data_peptide_quant)) > 0)
-  data_peptide_quant <- data_peptide_quant[sel,]
-  data_peptide_info <- data_peptide_info[sel,]
+    if(any(data_peptide_info$Gene_name == "")){
+        loc <- which(data_peptide_info$Gene_name == "")
+        data_peptide_info$Gene_name[loc] <- "Unassigned"
+    }
 
-  return(list(Protein_level=list(Quant_data=data_protein_quant,Meta_data=data_protein_info,Num_peptides_per_quant=data_protein_peptide_count),
-              Peptide_level=list(Quant_data=data_peptide_quant,Meta_data=data_peptide_info)))
+    if(any(is.na(data_peptide_info$Organism))){
+        data_peptide_info$Organism[is.na(data_peptide_info$Organism)] <- ""
+    }
 
-  options(warn=0)
+    # Make rownames of peptide and protein quant more readable
+    rownames(data_protein_quant) <- data_protein_info$Gene_name
+    rownames(data_protein_peptide_count) <- data_protein_info$Gene_name
+    rownames(data_peptide_quant) <- data_peptide_info$Sequence
+
+    # Check if all protein quantifications were based on at least min_pep_count
+    # numbers of peptides
+    data_protein_quant[data_protein_peptide_count < min_pep_count] <- NA
+
+    # Remove rows which are showing only missing values
+    sel <- which(rowSums(!is.na(data_protein_quant)) > 0)
+    data_protein_quant <- data_protein_quant[sel, ]
+    data_protein_info <- data_protein_info[sel, ]
+    data_protein_peptide_count <- data_protein_peptide_count[sel, ]
+
+    sel <- which(rowSums(!is.na(data_peptide_quant)) > 0)
+    data_peptide_quant <- data_peptide_quant[sel, ]
+    data_peptide_info <- data_peptide_info[sel, ]
+
+    prol <- list(Quant_data=data_protein_quant, Meta_data=data_protein_info,
+                 Num_peptides_per_quant=data_protein_peptide_count)
+    pepl <- list(Quant_data=data_peptide_quant, Meta_data=data_peptide_info)
+
+    return(list(Protein_level=prol, Peptide_level=pepl))
+
+    options(warn=0)
 }
 
 #' Load IceR result files
