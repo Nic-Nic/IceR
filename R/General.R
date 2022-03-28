@@ -43,23 +43,22 @@ runIceR <- function() {
 #' @param File File name of xlsx-file
 #' @return xlsx-file
 #' @export
-SaveExcel = function(Data,File)
-{
-  wb <- openxlsx::createWorkbook("Data")
-  if(is.data.frame(Data))
-  {
-    openxlsx::addWorksheet(wb, "Data")
-    openxlsx::writeData(wb, "Data",Data)
-  }else
-  {
-    for(t in 1:length(Data))
-    {
-      openxlsx::addWorksheet(wb, names(Data)[t])
-      openxlsx::writeData(wb, names(Data)[t],Data[[t]])
-    }
-  }
+SaveExcel <- function(Data, File){
+    wb <- openxlsx::createWorkbook("Data")
 
-  openxlsx::saveWorkbook(wb, File, overwrite = TRUE)
+    if(is.data.frame(Data)){
+        openxlsx::addWorksheet(wb, "Data")
+        openxlsx::writeData(wb, "Data", Data)
+    }
+
+    else{
+        for(t in 1:length(Data)){
+            openxlsx::addWorksheet(wb, names(Data)[t])
+            openxlsx::writeData(wb, names(Data)[t], Data[[t]])
+        }
+    }
+
+    openxlsx::saveWorkbook(wb, File, overwrite=TRUE)
 }
 
 #' Load MaxQuant result files
