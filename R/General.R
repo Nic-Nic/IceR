@@ -195,305 +195,442 @@ load_MaxQ_data <- function(path=NA,min_pep_count=1,min_pep_count_criteria=c("all
 }
 
 #' Load IceR result files
-#' @param path_to_parameter_file Optional path to IceR parameter file created during IceR run. By default set to NA. In this case a file browser is opened asking for the path to the Parameters.xlsx generated during IceR run.
-#' @param path_to_requant_folder Optional path to folder containing IceR outputs. Not required if path_to_parameter_file is defined. By default set to NA. In this case a file browser is opened. If path is directly specified, it has to end with \\
-#' @param file_name_extension Optional file name extension of IceR output files. Not required if path_to_parameter_file is defined. Only required if path_to_requant_folder directly specified.
-#' @param path_MaxQ Optional path to folder containing MaxQuant outputs. Not required if path_to_parameter_file is defined. By default set to NA. In this case a file browser is opened. If path is directly specified, it has to end with \\
-#' @param quant_value Specifying which protein quantification data should be used. Selection between "LFQ", "Total" or "Top3". By default set to "LFQ".
-#' @param min_feat_count Minimal required number of quantified features per protein. By default set to 1.
-#' @param min_feat_count_criteria Criteria how to count quantified features per protein. Either all or only unique peptide features are counted. By default set to "all".
-#' @param imputed Boolean value indicating if data with noise model based imputation should be used. By default set to T.
+#' @param path_to_parameter_file Optional path to IceR parameter file created
+#' during IceR run. By default set to NA. In this case a file browser is opened
+#' asking for the path to the Parameters.xlsx generated during IceR run.
+#' @param path_to_requant_folder Optional path to folder containing IceR
+#' outputs. Not required if path_to_parameter_file is defined. By default set to
+#' NA. In this case a file browser is opened. If path is directly specified, it
+#' has to end with \\
+#' @param file_name_extension Optional file name extension of IceR output files.
+#' Not required if path_to_parameter_file is defined. Only required if
+#' path_to_requant_folder directly specified.
+#' @param path_MaxQ Optional path to folder containing MaxQuant outputs. Not
+#' required if path_to_parameter_file is defined. By default set to NA. In this
+#' case a file browser is opened. If path is directly specified, it has to end
+#' with \\
+#' @param quant_value Specifying which protein quantification data should be
+#' used. Selection between "LFQ", "Total" or "Top3". By default set to "LFQ".
+#' @param min_feat_count Minimal required number of quantified features per
+#' protein. By default set to 1.
+#' @param min_feat_count_criteria Criteria how to count quantified features per
+#' protein. Either all or only unique peptide features are counted. By default
+#' set to "all".
+#' @param imputed Boolean value indicating if data with noise model based
+#' imputation should be used. By default set to T.
 #' @details Wrapper function to load and filter IceR results.
-#' @return List object containing protein and peptide quantification information in sub-lists named Protein_level and Peptide_level, respectively.
+#' @return List object containing protein and peptide quantification information
+#' in sub-lists named Protein_level and Peptide_level, respectively.
 #' @export
-load_Requant_data <- function(path_to_parameter_file=NA,path_to_requant_folder=NA,file_name_extension=NA,path_MaxQ=NA,quant_value=c("LFQ","Total","Top3"),min_feat_count=1,min_feat_count_criteria=c("all","unique"),imputed=T)
-{
-  options(warn=-1)
-  #library(openxlsx)
-  quant_value <- quant_value[1]
-  min_feat_count_criteria <- min_feat_count_criteria[1]
+load_Requant_data <- function(path_to_parameter_file=NA,
+                              path_to_requant_folder=NA, file_name_extension=NA,
+                              path_MaxQ=NA,
+                              quant_value=c("LFQ", "Total", "Top3"),
+                              min_feat_count=1,
+                              min_feat_count_criteria=c("all", "unique"),
+                              imputed=TRUE){
+    options(warn=-1)
+    quant_value <- quant_value[1]
+    min_feat_count_criteria <- min_feat_count_criteria[1]
 
-  if(is.na(path_to_parameter_file) & is.na(path_to_requant_folder) & is.na(file_name_extension) & is.na(path_MaxQ))
-  {
-    print("Select Parameters.xlsx")
-    parameters <- openxlsx::read.xlsx(base::file.choose(),1)
+    if(is.na(path_to_parameter_file) & is.na(path_to_requant_folder)
+       & is.na(file_name_extension) & is.na(path_MaxQ)){
+        print("Select Parameters.xlsx")
+        parameters <- openxlsx::read.xlsx(base::file.choose(), 1)
 
-    #check if files can be found in the original location
-    MaxQ_file <- file.exists(paste0(parameters$Setting[2],"/proteinGroups.txt"))
-    Requant_file <- file.exists(paste0(parameters$Setting[3],"/Features_",parameters$Setting[4],".tab"))
-    if(MaxQ_file == T & Requant_file == T)
-    {
-      path_to_requant_folder <- base::paste(parameters$Setting[3],"/",sep="")
-      file_name_extension <- base::paste("_",parameters$Setting[4],sep="")
-      path_to_MaxQ <- base::paste(parameters$Setting[2],"/",sep="")
-      MaxQ_data <- utils::read.table(base::paste(path_to_MaxQ,"proteinGroups.txt",sep=""),sep="\t",header=T)
-      MaxQ_data$Organism <- base::substr(MaxQ_data$Fasta.headers,regexpr("OS=",MaxQ_data$Fasta.headers)+3,regexpr("GN=",MaxQ_data$Fasta.headers)-2)
-      MaxQ_data$ID <- stringr::str_split(MaxQ_data$Majority.protein.IDs,";",simplify = T)[,1]
-    }else #a file could not be found so ask for paths individually
-    {
-      print("Paths in Parameter.xlsx seem to be no longer correct. Please supply paths manually.")
-      print("Select Features_x.tab file")
-      path_to_requant <- base::file.choose()
-      temp <- unlist(gregexpr("\\\\",path_to_requant))
-      path_to_requant_folder <- base::substr(path_to_requant,1,temp[length(temp)])
-      file_name_extension <- base::substr(path_to_requant,temp[length(temp)]+1,200)
-      file_name_extension <- base::gsub("Features_|\\.tab","",file_name_extension)
-      file_name_extension <- base::paste0("_",file_name_extension)
+        # Check if files can be found in the original location
+        MaxQ_file <- file.exists(paste0(parameters$Setting[2],
+                                        "/proteinGroups.txt"))
+        Requant_file <- file.exists(paste0(parameters$Setting[3],
+                                           "/Features_", parameters$Setting[4],
+                                           ".tab"))
 
-      print("Select a file in the corresponding MaxQuant output folder")
-      path_to_MaxQ <- base::file.choose()
-      temp <- unlist(gregexpr("\\\\",path_to_MaxQ))
-      path_to_MaxQ <- base::substr(path_to_MaxQ,1,temp[length(temp)])
-      MaxQ_data <- utils::read.table(base::paste(path_to_MaxQ,"proteinGroups.txt",sep=""),sep="\t",header=T)
-      MaxQ_data$Organism <- base::substr(MaxQ_data$Fasta.headers,regexpr("OS=",MaxQ_data$Fasta.headers)+3,regexpr("GN=",MaxQ_data$Fasta.headers)-2)
-      MaxQ_data$ID <- stringr::str_split(MaxQ_data$Majority.protein.IDs,";",simplify = T)[,1]
-    }
-  }else if(!is.na(path_to_parameter_file))
-  {
-    parameters <- openxlsx::read.xlsx(path_to_parameter_file,1)
-    #check if files can be found in the original location
-    MaxQ_file <- file.exists(paste0(parameters$Setting[2],"/proteinGroups.txt"))
-    Requant_file <- file.exists(paste0(parameters$Setting[3],"/Features_",parameters$Setting[4],".tab"))
-    if(MaxQ_file == T & Requant_file == T)
-    {
-      path_to_requant_folder <- base::paste(parameters$Setting[3],"/",sep="")
-      file_name_extension <- base::paste("_",parameters$Setting[4],sep="")
-      path_to_MaxQ <- base::paste(parameters$Setting[2],"/",sep="")
-      MaxQ_data <- utils::read.table(base::paste(path_to_MaxQ,"proteinGroups.txt",sep=""),sep="\t",header=T)
-      MaxQ_data$Organism <- base::substr(MaxQ_data$Fasta.headers,regexpr("OS=",MaxQ_data$Fasta.headers)+3,regexpr("GN=",MaxQ_data$Fasta.headers)-2)
-      MaxQ_data$ID <- stringr::str_split(MaxQ_data$Majority.protein.IDs,";",simplify = T)[,1]
-    }else #a file could not be found so ask for paths individually
-    {
-      print("Paths in Parameter.xlsx seem to be no longer correct. Please supply paths manually.")
-      print("Select Features_x.tab file")
-      path_to_requant <- base::file.choose()
-      temp <- unlist(gregexpr("\\\\",path_to_requant))
-      path_to_requant_folder <- base::substr(path_to_requant,1,temp[length(temp)])
-      file_name_extension <- base::substr(path_to_requant,temp[length(temp)]+1,200)
-      file_name_extension <- base::gsub("Features_|\\.tab","",file_name_extension)
-      file_name_extension <- base::paste0("_",file_name_extension)
+        if(MaxQ_file == TRUE & Requant_file == TRUE){
+            path_to_requant_folder <- base::paste(parameters$Setting[3],
+                                                  "/", sep="")
+            file_name_extension <- base::paste("_", parameters$Setting[4],
+                                               sep="")
+            path_to_MaxQ <- base::paste(parameters$Setting[2], "/", sep="")
+            usepath <- base::paste(path_to_MaxQ, "proteinGroups.txt", sep="")
+            MaxQ_data <- utils::read.table(usepath, sep="\t", header=TRUE)
+            regx1 <- regexpr("OS=", MaxQ_data$Fasta.headers) + 3
+            regx2 <- regexpr("GN=", MaxQ_data$Fasta.headers) - 2
+            MaxQ_data$Organism <- base::substr(MaxQ_data$Fasta.headers, regx1,
+                                               regx2)
+            MaxQ_data$ID <- stringr::str_split(MaxQ_data$Majority.protein.IDs,
+                                               ";", simplify=TRUE)[, 1]
+        }
 
-      print("Select a file in the corresponding MaxQuant output folder")
-      path_to_MaxQ <- base::file.choose()
-      temp <- unlist(gregexpr("\\\\",path_to_MaxQ))
-      path_to_MaxQ <- base::substr(path_to_MaxQ,1,temp[length(temp)])
-      MaxQ_data <- utils::read.table(base::paste(path_to_MaxQ,"proteinGroups.txt",sep=""),sep="\t",header=T)
-      MaxQ_data$Organism <- base::substr(MaxQ_data$Fasta.headers,regexpr("OS=",MaxQ_data$Fasta.headers)+3,regexpr("GN=",MaxQ_data$Fasta.headers)-2)
-      MaxQ_data$ID <- stringr::str_split(MaxQ_data$Majority.protein.IDs,";",simplify = T)[,1]
-    }
-  }else
-  {
-    if(is.na(path_to_requant_folder) | is.na(file_name_extension))
-    {
-      print("Select Features_x.tab file")
-      path_to_requant <- base::file.choose()
-      temp <- unlist(gregexpr("\\\\",path_to_requant))
-      path_to_requant_folder <- base::substr(path_to_requant,1,temp[length(temp)])
-      file_name_extension <- base::substr(path_to_requant,temp[length(temp)]+1,200)
-      file_name_extension <- base::gsub("Features_|\\.tab","",file_name_extension)
-    }else
-    {
-      file_name_extension <- base::paste("_",file_name_extension,sep="")
+        else{ # A file could not be found so ask for paths individually
+            print(paste("Paths in Parameter.xlsx seem to be no longer correct.",
+                        "Please supply paths manually.", sep=' '))
+            print("Select Features_x.tab file")
+            path_to_requant <- base::file.choose()
+            temp <- unlist(gregexpr("\\\\", path_to_requant))
+            path_to_requant_folder <- base::substr(path_to_requant, 1,
+                                                   temp[length(temp)])
+            file_name_extension <- base::substr(path_to_requant,
+                                                temp[length(temp)] + 1, 200)
+            file_name_extension <- base::gsub("Features_|\\.tab", "",
+                                              file_name_extension)
+            file_name_extension <- base::paste0("_", file_name_extension)
+
+            print("Select a file in the corresponding MaxQuant output folder")
+            path_to_MaxQ <- base::file.choose()
+            temp <- unlist(gregexpr("\\\\", path_to_MaxQ))
+            path_to_MaxQ <- base::substr(path_to_MaxQ, 1, temp[length(temp)])
+            path <- base::paste(path_to_MaxQ, "proteinGroups.txt", sep="")
+            MaxQ_data <- utils::read.table(path, sep="\t", header=TRUE)
+            regx1 <- regexpr("OS=", MaxQ_data$Fasta.headers) + 3
+            regx2 <- regexpr("GN=", MaxQ_data$Fasta.headers) - 2
+            MaxQ_data$Organism <- base::substr(MaxQ_data$Fasta.headers, regx1,
+                                               regx2)
+            MaxQ_data$ID <- stringr::str_split(MaxQ_data$Majority.protein.IDs,
+                                               ";", simplify=TRUE)[, 1]
+        }
     }
 
-    if(is.na(path_MaxQ))
-    {
-      print("Select a file in the corresponding MaxQuant output folder")
-      path_to_MaxQ <- base::file.choose()
-      temp <- unlist(gregexpr("\\\\",path_to_MaxQ))
-      path_to_MaxQ <- base::substr(path_to_MaxQ,1,temp[length(temp)])
-      MaxQ_data <- utils::read.table(base::paste(path_to_MaxQ,"proteinGroups.txt",sep=""),sep="\t",header=T)
-      MaxQ_data$Organism <- base::substr(MaxQ_data$Fasta.headers,regexpr("OS=",MaxQ_data$Fasta.headers)+3,regexpr("GN=",MaxQ_data$Fasta.headers)-2)
-      MaxQ_data$ID <- stringr::str_split(MaxQ_data$Majority.protein.IDs,";",simplify = T)[,1]
+    else if(!is.na(path_to_parameter_file)){
+        parameters <- openxlsx::read.xlsx(path_to_parameter_file, 1)
+        # Check if files can be found in the original location
+        MaxQ_file <- file.exists(paste0(parameters$Setting[2],
+                                 "/proteinGroups.txt"))
+        Requant_file <- file.exists(paste0(parameters$Setting[3], "/Features_",
+                                    parameters$Setting[4], ".tab"))
+        if(MaxQ_file == TRUE & Requant_file == TRUE){
+            path_to_requant_folder <- base::paste(parameters$Setting[3] ,"/",
+                                                  sep="")
+            file_name_extension <- base::paste("_", parameters$Setting[4],
+                                               sep="")
+            path_to_MaxQ <- base::paste(parameters$Setting[2], "/", sep="")
+            MaxQ_data <- utils::read.table(base::paste(path_to_MaxQ,
+                                                       "proteinGroups.txt",
+                                                       sep=""),
+                                           sep="\t", header=TRUE)
+            regx1 <- regexpr("OS=", MaxQ_data$Fasta.headers) + 3
+            regx2 <- regexpr("GN=", MaxQ_data$Fasta.headers) - 2
+            MaxQ_data$Organism <- base::substr(MaxQ_data$Fasta.headers, regx1,
+                                               regx2)
+            MaxQ_data$ID <- stringr::str_split(MaxQ_data$Majority.protein.IDs,
+                                               ";", simplify=TRUE)[, 1]
+        }
 
-    }else
-    {
-      path_to_MaxQ <- path_MaxQ
-      MaxQ_data <- utils::read.table(base::paste(path_to_MaxQ,"proteinGroups.txt",sep=""),sep="\t",header=T)
-      MaxQ_data$Organism <- base::substr(MaxQ_data$Fasta.headers,regexpr("OS=",MaxQ_data$Fasta.headers)+3,regexpr("GN=",MaxQ_data$Fasta.headers)-2)
-      MaxQ_data$ID <- stringr::str_split(MaxQ_data$Majority.protein.IDs,";",simplify = T)[,1]
+        else{ # A file could not be found so ask for paths individually
+            print(paste("Paths in Parameter.xlsx seem to be no longer correct.",
+                        "Please supply paths manually.", sep=' '))
+            print("Select Features_x.tab file")
+            path_to_requant <- base::file.choose()
+            temp <- unlist(gregexpr("\\\\", path_to_requant))
+            path_to_requant_folder <- base::substr(path_to_requant, 1,
+                                                   temp[length(temp)])
+            file_name_extension <- base::substr(path_to_requant,
+                                                temp[length(temp)] + 1, 200)
+            file_name_extension <- base::gsub("Features_|\\.tab", "",
+                                              file_name_extension)
+            file_name_extension <- base::paste0("_", file_name_extension)
+
+            print("Select a file in the corresponding MaxQuant output folder")
+            path_to_MaxQ <- base::file.choose()
+            temp <- unlist(gregexpr("\\\\", path_to_MaxQ))
+            path_to_MaxQ <- base::substr(path_to_MaxQ, 1, temp[length(temp)])
+            MaxQ_data <- utils::read.table(base::paste(path_to_MaxQ,
+                                                       "proteinGroups.txt",
+                                                       sep=""), sep="\t",
+                                           header=TRUE)
+            regx1 <- regexpr("OS=", MaxQ_data$Fasta.headers) + 3
+            regx2 <- regexpr("GN=", MaxQ_data$Fasta.headers) - 2
+            MaxQ_data$Organism <- base::substr(MaxQ_data$Fasta.headers, regx1,
+                                               regx2)
+            MaxQ_data$ID <- stringr::str_split(MaxQ_data$Majority.protein.IDs,
+                                               ";", simplify=TRUE)[, 1]
+        }
     }
-  }
 
-  print(base::paste("Selected path to IceR output:",path_to_requant_folder))
-  print(base::paste("Selected IceR output name:",file_name_extension))
-  print(base::paste("Selected path to MaxQuant output:",path_to_MaxQ))
+    else{
+        if(is.na(path_to_requant_folder) | is.na(file_name_extension)){
+            print("Select Features_x.tab file")
+            path_to_requant <- base::file.choose()
+            temp <- unlist(gregexpr("\\\\", path_to_requant))
+            path_to_requant_folder <- base::substr(path_to_requant, 1,
+                                                   temp[length(temp)])
+            file_name_extension <- base::substr(path_to_requant,
+                                                temp[length(temp)] + 1, 200)
+            file_name_extension <- base::gsub("Features_|\\.tab", "",
+                                              file_name_extension)
+        }
 
-  if(quant_value == "Total" & imputed == F)protein_quant_tab <- "Total"
-  if(quant_value == "Total" & imputed == T)protein_quant_tab <- "Total_imputed"
-  if(quant_value == "Top3" & imputed == F)protein_quant_tab <- "Top3"
-  if(quant_value == "Top3" & imputed == T)protein_quant_tab <- "Top3_imputed"
-  if(quant_value == "LFQ" & imputed == F)protein_quant_tab <- "LFQ"
-  if(quant_value == "LFQ" & imputed == T)protein_quant_tab <- "LFQ_imputed"
+        else{
+            file_name_extension <- base::paste("_", file_name_extension, sep="")
+        }
 
+        if(is.na(path_MaxQ)){
+            print("Select a file in the corresponding MaxQuant output folder")
+            path_to_MaxQ <- base::file.choose()
+            temp <- unlist(gregexpr("\\\\", path_to_MaxQ))
+            path_to_MaxQ <- base::substr(path_to_MaxQ, 1, temp[length(temp)])
+            MaxQ_data <- utils::read.table(base::paste(path_to_MaxQ,
+                                                       "proteinGroups.txt",
+                                                       sep=""), sep="\t",
+                                           header=TRUE)
+            regx1 <- regexpr("OS=", MaxQ_data$Fasta.headers) + 3
+            regx2 <- regexpr("GN=", MaxQ_data$Fasta.headers) - 2
+            MaxQ_data$Organism <- base::substr(MaxQ_data$Fasta.headers, regx1,
+                                               regx2)
+            MaxQ_data$ID <- stringr::str_split(MaxQ_data$Majority.protein.IDs,
+                                               ";", simplify=TRUE)[, 1]
+        }
 
-  data_protein <- utils::read.table(base::paste(path_to_requant_folder,"Proteins_quantification_",protein_quant_tab,file_name_extension,".tab",sep=""),header = T,sep = "\t")
-  colnames(data_protein) <- base::gsub("^X","",colnames(data_protein))
+        else{
+            path_to_MaxQ <- path_MaxQ
+            MaxQ_data <- utils::read.table(base::paste(path_to_MaxQ,
+                                                       "proteinGroups.txt",
+                                                       sep=""), sep="\t",
+                                           header=TRUE)
+            regx1 <- regexpr("OS=", MaxQ_data$Fasta.headers) + 3
+            regx2 <- regexpr("GN=", MaxQ_data$Fasta.headers) - 2
+            MaxQ_data$Organism <- base::substr(MaxQ_data$Fasta.headers, regx1,
+                                               regx2)
+            MaxQ_data$ID <- stringr::str_split(MaxQ_data$Majority.protein.IDs,
+                                               ";", simplify=TRUE)[, 1]
+        }
+    }
 
-  features <- utils::read.table(base::paste(path_to_requant_folder,"Features",file_name_extension,".tab",sep=""),header=T,sep = "\t")
-  features_sample_matrix <- utils::read.table(base::paste(path_to_requant_folder,"Features_quantification",ifelse(imputed==T,"_imputed",""),file_name_extension,".tab",sep=""),header=T,sep = "\t")
-  features_sample_matrix_counts <- utils::read.table(base::paste(path_to_requant_folder,"Features_quantification_ioncount",file_name_extension,".tab",sep=""),header=T,sep = "\t")
-  features_sample_matrix_pvals <- utils::read.table(base::paste(path_to_requant_folder,"Features_quantification_pvals",file_name_extension,".tab",sep=""),header=T,sep = "\t")
-  features_sample_matrix_S2B <- utils::read.table(base::paste(path_to_requant_folder,"Features_quantification_S2B",file_name_extension,".tab",sep=""),header=T,sep = "\t")
+    print(base::paste("Selected path to IceR output:", path_to_requant_folder))
+    print(base::paste("Selected IceR output name:", file_name_extension))
+    print(base::paste("Selected path to MaxQuant output:", path_to_MaxQ))
 
+    if(quant_value == "Total" & imputed == FALSE){
+        protein_quant_tab <- "Total"
+    }
 
+    if(quant_value == "Total" & imputed == TRUE){
+        protein_quant_tab <- "Total_imputed"
+    }
 
-  data_protein_quant <- data_protein[,which(!grepl("median_alignment_score|median_quant_pvals|median_S2B",colnames(data_protein)))[-c(1:3)]]
-  data_protein_pvals <- data_protein[,which(grepl("median_quant_pvals",colnames(data_protein)))]
-  data_protein_S2B <- data_protein[,which(grepl("median_S2B",colnames(data_protein)))]
+    if(quant_value == "Top3" & imputed == FALSE){
+        protein_quant_tab <- "Top3"
+    }
 
-  ##prepare additional information per row on protein level
-  data_protein_info <- base::data.frame(Gene_name=stringr::str_split(data_protein$Gene_Name,";",simplify = T)[,1],
-                                  ID=stringr::str_split(data_protein$UniProt_Identifier,";",simplify = T)[,1],
-                                  Organism=MaxQ_data$Organism[match(stringr::str_split(data_protein$UniProt_Identifier,";",simplify = T)[,1],MaxQ_data$ID)],
-                                  num_quant_features=data_protein$num_quant_features,
-                                  Gene_names_all=data_protein$Gene_Name)
-  data_protein_info$Gene_name <- as.character(data_protein_info$Gene_name)
-  data_protein_info$ID <- as.character(data_protein_info$ID)
-  data_protein_info$Organism <- as.character(data_protein_info$Organism)
-  data_protein_info$Gene_names_all <- as.character(data_protein_info$Gene_names_all)
+    if(quant_value == "Top3" & imputed == TRUE){
+        protein_quant_tab <- "Top3_imputed"
+    }
 
-  if(any(is.na(data_protein_info$Gene_name)))
-  {
-    data_protein_info$Gene_name <- as.character(data_protein_info$Gene_name)
-    data_protein_info$Gene_name[which(is.na(data_protein_info$Gene_name))] <- "Unassigned"
-  }
+    if(quant_value == "LFQ" & imputed == FALSE){
+        protein_quant_tab <- "LFQ"
+    }
 
-  ##keep IDs which correspond to Major protein id from MaxQ
-  keep <- which(data_protein_info$ID %in% features$Protein)###quantified by at least 1 unique feature
-  keep <- unique(append(keep,which(data_protein_info$ID %in% stringr::str_split(MaxQ_data$Protein.IDs[which(grepl(";",MaxQ_data$Protein.IDs))],";",simplify = T)[,1]))) ###also keep leading protein id if only quantified by overlapping peptides
-  data_protein <- data_protein[keep,]
-  data_protein_quant <- data_protein_quant[keep,]
-  data_protein_pvals <- data_protein_pvals[keep,]
-  data_protein_S2B <- data_protein_S2B[keep,]
-  data_protein_info <- data_protein_info[keep,]
+    if(quant_value == "LFQ" & imputed == TRUE){
+        protein_quant_tab <- "LFQ_imputed"
+    }
 
-  ##make gene names unique if some are existing duplicated
-  data_protein_info$Gene_name <- base::make.unique(data_protein_info$Gene_name)
+    data_protein <- utils::read.table(base::paste(path_to_requant_folder,
+                                                  "Proteins_quantification_",
+                                                  protein_quant_tab,
+                                                  file_name_extension, ".tab",
+                                                  sep=""), header=TRUE,
+                                      sep="\t")
+    colnames(data_protein) <- base::gsub("^X", "", colnames(data_protein))
 
-  ##filter feature data for either unknown feature or specific peptide sequence (no overlapping features)
-  features_sample_matrix <- features_sample_matrix[which(!grepl(";|\\|",features$Sequence)),]
-  features_sample_matrix_counts <- features_sample_matrix_counts[which(!grepl(";|\\|",features$Sequence)),]
-  features_sample_matrix_pvals <- features_sample_matrix_pvals[which(!grepl(";|\\|",features$Sequence)),]
-  features_sample_matrix_S2B <- features_sample_matrix_S2B[which(!grepl(";|\\|",features$Sequence)),]
+    features <- utils::read.table(base::paste(path_to_requant_folder,
+                                              "Features", file_name_extension,
+                                              ".tab", sep=""), header=TRUE,
+                                  sep="\t")
+    pth <- base::paste(path_to_requant_folder, "Features_quantification",
+                       ifelse(imputed == TRUE, "_imputed", ""),
+                       file_name_extension, ".tab", sep="")
+    features_sample_matrix <- utils::read.table(pth, header=TRUE, sep="\t")
+    pth <- base::paste(path_to_requant_folder,
+                       "Features_quantification_ioncount", file_name_extension,
+                       ".tab", sep="")
+    features_sample_matrix_counts <- utils::read.table(pth, header=TRUE,
+                                                       sep="\t")
+    pth <- base::paste(path_to_requant_folder, "Features_quantification_pvals",
+                       file_name_extension, ".tab", sep="")
+    features_sample_matrix_pvals <- utils::read.table(pth, header=TRUE,
+                                                      sep="\t")
+    pth <- base::paste(path_to_requant_folder, "Features_quantification_S2B",
+                       file_name_extension, ".tab", sep="")
+    features_sample_matrix_S2B <- utils::read.table(pth, header=TRUE, sep="\t")
 
-  features <- features[which(!grepl(";|\\|",features$Sequence)),]
+    usecol <- !grepl("median_alignment_score|median_quant_pvals|median_S2B",
+                     colnames(data_protein))
+    data_protein_quant <- data_protein[, which(usecol)[-c(1:3)]]
+    usecol <- grepl("median_quant_pvals", colnames(data_protein))
+    data_protein_pvals <- data_protein[, which(usecol)]
+    usecol <- grepl("median_S2B", colnames(data_protein))
+    data_protein_S2B <- data_protein[, which(usecol)]
 
-  ###prepare additional information per row on feature level
-  ##which protein ID should be kept in case if a peptide belongs to two or more protein IDs
-  multi_IDs <- stringr::str_split(features$Protein,";|\\|",simplify = T)
-  IDs_used <- vector(mode="character",length(nrow(features)))
-  for(i in 1:nrow(multi_IDs))
-  {
-    IDs_used[i] <- multi_IDs[i,which(multi_IDs[i,] %in% MaxQ_data$ID)[1]]
-  }
-  IDs_used[is.na(IDs_used)] <- ""
+    # Prepare additional information per row on protein level
+    gnames <- as.character(stringr::str_split(data_protein$Gene_Name, ";",
+                                              simplify=TRUE)[, 1])
+    ids <- as.character(stringr::str_split(data_protein$UniProt_Identifier, ";",
+                                           simplify=TRUE)[, 1])
+    org <- as.character(MaxQ_data$Organism[match(ids[, 1], MaxQ_data$ID)])
+    nfeats <- data_protein$num_quant_features
+    gnames_all <- as.character(data_protein$Gene_Name)
+    data_protein_info <- base::data.frame(Gene_name=gnames, ID=ids,
+                                          Organism=org,
+                                          num_quant_features=nfeats,
+                                          Gene_names_all=gnames_all)
 
-  data_peptide_info <- base::data.frame(Sequence=features$Sequence,
-                                  Gene_name=data_protein_info$Gene_name[match(stringr::str_split(features$Protein,";|\\|",simplify = T)[,1],data_protein_info$ID)],
-                                  ID=IDs_used,
-                                  Feature_name=features$Feature_name,
-                                  Organism=data_protein_info$Organism[match(stringr::str_split(features$Protein,";|\\|",simplify = T)[,1],data_protein_info$ID)],
-                                  Charge=features$Charge,
-                                  IDs_major=features$Protein,
-                                  Score=features$mean_Scores)
-  data_peptide_info$Sequence <- as.character(data_peptide_info$Sequence)
-  data_peptide_info$Gene_name <- as.character(data_peptide_info$Gene_name)
-  data_peptide_info$ID <- as.character(data_peptide_info$ID)
-  data_peptide_info$Feature_name <- as.character(data_peptide_info$Feature_name)
-  data_peptide_info$Organism <- as.character(data_peptide_info$Organism)
-  data_peptide_info$IDs_major <- as.character(data_peptide_info$IDs_major)
+    if(any(is.na(data_protein_info$Gene_name))){
+        data_protein_info$Gene_name <- as.character(data_protein_info$Gene_name)
+        locs <- which(is.na(data_protein_info$Gene_name))
+        data_protein_info$Gene_name[locs] <- "Unassigned"
+    }
 
-  if(any(is.na(data_peptide_info$Gene_name)))
-  {
-    data_peptide_info$Gene_name <- as.character(data_peptide_info$Gene_name)
-    data_peptide_info$Gene_name[which(is.na(data_peptide_info$Gene_name))] <- "Unassigned"
-  }
+    # Keep IDs which correspond to Major protein id from MaxQ
+    # Quantified by at least 1 unique feature
+    keep <- which(data_protein_info$ID %in% features$Protein)
+    # Also keep leading protein id if only quantified by overlapping peptides
+    loc <- which(grepl(";", MaxQ_data$Protein.IDs))
+    ids <- stringr::str_split(MaxQ_data$Protein.IDs[loc], ";", simplify=TRUE)
+    keep <- unique(append(keep,which(data_protein_info$ID %in% ids[, 1])))
+    data_protein <- data_protein[keep, ]
+    data_protein_quant <- data_protein_quant[keep, ]
+    data_protein_pvals <- data_protein_pvals[keep, ]
+    data_protein_S2B <- data_protein_S2B[keep, ]
+    data_protein_info <- data_protein_info[keep, ]
 
-  if(any(is.na(data_peptide_info$Organism)))
-  {
-    data_peptide_info$Organism[is.na(data_peptide_info$Organism)] <- ""
-  }
-  ##keep IDs which correspond to Major protein id from MaxQ
-  features <- features[which(data_peptide_info$ID %in% MaxQ_data$ID | is.na(data_peptide_info$ID) | data_peptide_info$ID == ""),]
+    # Make gene names unique if some are existing duplicated
+    unique <- base::make.unique(data_protein_info$Gene_name)
+    data_protein_info$Gene_name <- unique
 
-  features_sample_matrix <- features_sample_matrix[which(data_peptide_info$ID %in% MaxQ_data$ID | is.na(data_peptide_info$ID) | data_peptide_info$ID == ""),]
-  features_sample_matrix_counts <- features_sample_matrix_counts[which(data_peptide_info$ID %in% MaxQ_data$ID | is.na(data_peptide_info$ID) | data_peptide_info$ID == ""),]
-  features_sample_matrix_pvals <- features_sample_matrix_pvals[which(data_peptide_info$ID %in% MaxQ_data$ID | is.na(data_peptide_info$ID) | data_peptide_info$ID == ""),]
-  features_sample_matrix_S2B <- features_sample_matrix_S2B[which(data_peptide_info$ID %in% MaxQ_data$ID | is.na(data_peptide_info$ID) | data_peptide_info$ID == ""),]
+    # Filter feature data for either unknown feature or specific peptide
+    # sequence (no overlapping features)
+    useseq <- which(!grepl(";|\\|", features$Sequence))
+    features_sample_matrix <- features_sample_matrix[useseq,]
+    features_sample_matrix_counts <- features_sample_matrix_counts[useseq, ]
+    features_sample_matrix_pvals <- features_sample_matrix_pvals[useseq, ]
+    features_sample_matrix_S2B <- features_sample_matrix_S2B[useseq, ]
+    features <- features[useseq, ]
 
-  data_peptide_info <- data_peptide_info[which(data_peptide_info$ID %in% MaxQ_data$ID | is.na(data_peptide_info$ID) | data_peptide_info$ID == ""),]
+    # Prepare additional information per row on feature level
+    # Which protein ID should be kept in case if a peptide belongs to two or
+    # more protein IDs
+    multi_IDs <- stringr::str_split(features$Protein, ";|\\|", simplify=TRUE)
+    IDs_used <- vector(mode="character", length(nrow(features)))
 
-  ###make rownames of peptide and protein quant more readable
-  rownames(data_protein_quant) <- data_protein_info$Gene_name
-  rownames(data_protein_pvals) <- data_protein_info$Gene_name
-  rownames(data_protein_S2B) <- data_protein_info$Gene_name
+    for(i in 1:nrow(multi_IDs)){
+        IDs_used[i] <- multi_IDs[i, which(multi_IDs[i, ] %in% MaxQ_data$ID)[1]]
+    }
 
-  rownames(features_sample_matrix) <- data_peptide_info$Feature_name
-  rownames(features_sample_matrix_counts) <- data_peptide_info$Feature_name
-  rownames(features_sample_matrix_pvals) <- data_peptide_info$Feature_name
-  rownames(features_sample_matrix_S2B) <- data_peptide_info$Feature_name
+    IDs_used[is.na(IDs_used)] <- ""
+    loc <- match(stringr::str_split(features$Protein, ";|\\|",
+                                    simplify=TRUE)[, 1], data_protein_info$ID)
+    gnames <- as.character(data_protein_info$Gene_name[loc])
+    org <- as.character(data_protein_info$Organism[loc])
+    seq <- as.character(features$Sequence)
+    ids <- as.character(IDs_used)
+    feats <- as.character(features$Feature_name)
+    ids_maj <- as.character(features$Protein)
+    data_peptide_info <- base::data.frame(Sequence=seq, Gene_name=gnames,
+                                          ID=ids, Feature_name=feats,
+                                          Organism=org, Charge=features$Charge,
+                                          IDs_major=ids_maj,
+                                          Score=features$mean_Scores)
 
+    if(any(is.na(data_peptide_info$Gene_name))){
+        data_peptide_info$Gene_name <- as.character(data_peptide_info$Gene_name)
+        loc <- which(is.na(data_peptide_info$Gene_name))
+        data_peptide_info$Gene_name[loc] <- "Unassigned"
+    }
 
-  ###check if all protein quantifications were based on at least min_pep_count numbers of peptides
-  #determine num of available peps per protein level quantification
-  temp <- data.table::copy(features_sample_matrix)
-  temp[!is.na(temp)] <- 1
-  temp[is.na(temp)] <- 0
-  if(min_feat_count_criteria == "unique")
-  {
-    temp <- stats::aggregate(temp,by=list(Sequence=features$Sequence),FUN=max,na.rm=T)
-    temp_id <- features$Protein[match(temp$Sequence,features$Sequence)]
-    temp <- temp[,-1]
-    count_feat_per_ID <- stats::aggregate(temp,by=list(ID=temp_id),FUN=sum,na.rm=T)
-  }else
-  {
-    count_feat_per_ID <- stats::aggregate(temp,by=list(ID=features$Protein),FUN=sum,na.rm=T)
-  }
-  count_feat_per_ID <- count_feat_per_ID[match(data_protein_info$ID,count_feat_per_ID$ID),]
-  #rownames(count_feat_per_ID) <- base::make.unique(as.character(count_feat_per_ID$ID))
-  count_feat_per_ID <- count_feat_per_ID[,-1]
-  data_protein_quant[count_feat_per_ID < min_feat_count] <- NA
+    if(any(is.na(data_peptide_info$Organism))){
+        data_peptide_info$Organism[is.na(data_peptide_info$Organism)] <- ""
+    }
+    # Keep IDs which correspond to Major protein id from MaxQ
+    c1 <- data_peptide_info$ID %in% MaxQ_data$ID
+    c2 <- is.na(data_peptide_info$ID)
+    c3 <- data_peptide_info$ID == ""
+    userows <- which(c1 | c2 | c3)
 
-  ##remove rows which are showing only missing values
-  sel <- which(rowSums(!is.na(data_protein_quant)) > 0)
-  data_protein_quant <- data_protein_quant[sel,]
-  data_protein_info <- data_protein_info[sel,]
-  data_protein_pvals <- data_protein_pvals[sel,]
-  data_protein_S2B <- data_protein_S2B[sel,]
+    features <- features[userows, ]
+    features_sample_matrix <- features_sample_matrix[userows, ]
+    features_sample_matrix_counts <- features_sample_matrix_counts[userows, ]
+    features_sample_matrix_pvals <- features_sample_matrix_pvals[userows, ]
+    features_sample_matrix_S2B <- features_sample_matrix_S2B[userows, ]
+    data_peptide_info <- data_peptide_info[userows, ]
 
-  sel <- which(rowSums(!is.na(features_sample_matrix)) > 0)
-  features_sample_matrix <- features_sample_matrix[sel,]
-  features_sample_matrix_counts <- features_sample_matrix_counts[sel,]
-  features_sample_matrix_pvals <- features_sample_matrix_pvals[sel,]
-  features_sample_matrix_S2B <- features_sample_matrix_S2B[sel,]
-  data_peptide_info <- data_peptide_info[sel,]
-  features <- features[sel,]
+    # Make rownames of peptide and protein quant more readable
+    rownames(data_protein_quant) <- data_protein_info$Gene_name
+    rownames(data_protein_pvals) <- data_protein_info$Gene_name
+    rownames(data_protein_S2B) <- data_protein_info$Gene_name
 
+    rownames(features_sample_matrix) <- data_peptide_info$Feature_name
+    rownames(features_sample_matrix_counts) <- data_peptide_info$Feature_name
+    rownames(features_sample_matrix_pvals) <- data_peptide_info$Feature_name
+    rownames(features_sample_matrix_S2B) <- data_peptide_info$Feature_name
 
-  return(list(Protein_level=list(Quant_data=data_protein_quant,
-                                 Meta_data=data_protein_info,
-                                 Quant_pVal=data_protein_pvals,
-                                 Quant_S2B=data_protein_S2B),
-              Peptide_level=list(Quant_data=features_sample_matrix,
-                                 Ion_counts=features_sample_matrix_counts,
-                                 Quant_pVal=features_sample_matrix_pvals,
-                                 S2B=features_sample_matrix_S2B,
-                                 Meta_data=data_peptide_info,
-                                 Meta_data_full=features)))
-  options(warn=0)
+    # Check if all protein quantifications were based on at least min_pep_count
+    # numbers of peptides
+    # Determine num of available peps per protein level quantification
+    temp <- data.table::copy(features_sample_matrix)
+    temp[!is.na(temp)] <- 1
+    temp[is.na(temp)] <- 0
+
+    if(min_feat_count_criteria == "unique"){
+        temp <- stats::aggregate(temp, by=list(Sequence=features$Sequence),
+                                 FUN=max, na.rm=TRUE)
+        temp_id <- features$Protein[match(temp$Sequence, features$Sequence)]
+        temp <- temp[, -1]
+        count_feat_per_ID <- stats::aggregate(temp, by=list(ID=temp_id),
+                                              FUN=sum, na.rm=TRUE)
+    }
+
+    else{
+        count_feat_per_ID <- stats::aggregate(temp,
+                                              by=list(ID=features$Protein),
+                                              FUN=sum, na.rm=TRUE)
+    }
+
+    count_feat_per_ID <- count_feat_per_ID[match(data_protein_info$ID,
+                                                 count_feat_per_ID$ID), ]
+    count_feat_per_ID <- count_feat_per_ID[, -1]
+    data_protein_quant[count_feat_per_ID < min_feat_count] <- NA
+
+    # Remove rows which are showing only missing values
+    sel <- which(rowSums(!is.na(data_protein_quant)) > 0)
+    data_protein_quant <- data_protein_quant[sel, ]
+    data_protein_info <- data_protein_info[sel, ]
+    data_protein_pvals <- data_protein_pvals[sel, ]
+    data_protein_S2B <- data_protein_S2B[sel, ]
+
+    sel <- which(rowSums(!is.na(features_sample_matrix)) > 0)
+    features_sample_matrix <- features_sample_matrix[sel, ]
+    features_sample_matrix_counts <- features_sample_matrix_counts[sel, ]
+    features_sample_matrix_pvals <- features_sample_matrix_pvals[sel, ]
+    features_sample_matrix_S2B <- features_sample_matrix_S2B[sel, ]
+    data_peptide_info <- data_peptide_info[sel, ]
+    features <- features[sel, ]
+
+    return(list(Protein_level=list(Quant_data=data_protein_quant,
+                                   Meta_data=data_protein_info,
+                                   Quant_pVal=data_protein_pvals,
+                                   Quant_S2B=data_protein_S2B),
+                Peptide_level=list(Quant_data=features_sample_matrix,
+                                   Ion_counts=features_sample_matrix_counts,
+                                   Quant_pVal=features_sample_matrix_pvals,
+                                   S2B=features_sample_matrix_S2B,
+                                   Meta_data=data_peptide_info,
+                                   Meta_data_full=features)))
+    options(warn=0)
 }
 
 #' Adds sample annotation information to loaded MaxQuant or IceR data
 #' @param data_list List object containing loaded MaxQuant or IceR data
-#' @param Annotations Table with at least one column containing annotation information. Rows have to correspond to samples in loaded MaxQuant or IceR data. Requires same order of sampels (rows) as e.g. sampels (columns) in data_list$Protein_level$Quant_data
+#' @param Annotations Table with at least one column containing annotation
+#' information. Rows have to correspond to samples in loaded MaxQuant or IceR
+#' data. Requires same order of sampels (rows) as e.g. sampels (columns) in
+#' data_list$Protein_level$Quant_data
 #' @details Add sample annotation to loaded MaxQuant or IceR data.
-#' @return List object containing loaded MaxQuant or IceR data extended by annotation information
+#' @return List object containing loaded MaxQuant or IceR data extended by
+#' annotation information
 #' @export
-add_annotations <- function(data_list,Annotations)
-{
-  data_list$Annotations <- Annotations
-  return(data_list)
+add_annotations <- function(data_list, Annotations){
+    data_list$Annotations <- Annotations
+
+    return(data_list)
 }
 
 #' Change sample (column) names of loaded MaxQuant or IceR data
