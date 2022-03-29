@@ -4801,7 +4801,7 @@ requantify_features <- function(path_to_features,path_to_mzXML=NA,path_to_MaxQ_o
   Ioncount_feature_sample_matrix <- features_intensity
 
   feature_with_background_intensity <- features_intensity
-  Ioncount_feature_with_background_intensity <- features_intensity
+  Ioncount_feat_w_background_intensity <- features_intensity
 
   ###prepare matrices to store data
   if(peak_detection == T)
@@ -4812,7 +4812,7 @@ requantify_features <- function(path_to_features,path_to_mzXML=NA,path_to_MaxQ_o
       features_intensity_temp <- features_intensity
       feature_with_background_intensity_temp <- feature_with_background_intensity
       Ioncount_feature_sample_matrix_temp <- Ioncount_feature_sample_matrix
-      Ioncount_feature_with_background_intensity_temp <- Ioncount_feature_with_background_intensity
+      Ioncount_feat_w_background_intensity_temp <- Ioncount_feat_w_background_intensity
       #dT1_temp <- dT1
       #dM1_temp <- dM1
       Peak_rt_temp <- features_intensity
@@ -4826,7 +4826,7 @@ requantify_features <- function(path_to_features,path_to_mzXML=NA,path_to_MaxQ_o
       peak_quant[[p]] <- list(features_intensity=features_intensity_temp,
                               feature_with_background_intensity=feature_with_background_intensity_temp,
                               Ioncount_feature_sample_matrix=Ioncount_feature_sample_matrix_temp,
-                              Ioncount_feature_with_background_intensity=Ioncount_feature_with_background_intensity_temp,
+                              Ioncount_feat_w_background_intensity=Ioncount_feat_w_background_intensity_temp,
                               #dT1=dT1_temp,
                               #dM1=dM1_temp,
                               Peak_rt=Peak_rt_temp,
@@ -4871,7 +4871,7 @@ requantify_features <- function(path_to_features,path_to_mzXML=NA,path_to_MaxQ_o
       Ioncount_feature_sample_matrix[,c] <- signal[,2]
 
       feature_with_background_intensity[,c] <- signal_background[,1]
-      Ioncount_feature_with_background_intensity[,c] <- signal_background[,2]
+      Ioncount_feat_w_background_intensity[,c] <- signal_background[,2]
 
     }else
     {
@@ -4899,7 +4899,7 @@ requantify_features <- function(path_to_features,path_to_mzXML=NA,path_to_MaxQ_o
         peak_quant[[p]]$correct_peak[,c] <- signal[,10]
 
         peak_quant[[p]]$feature_with_background_intensity[,c] <- signal_background[,1]
-        peak_quant[[p]]$Ioncount_feature_with_background_intensity[,c] <- signal_background[,2]
+        peak_quant[[p]]$Ioncount_feat_w_background_intensity[,c] <- signal_background[,2]
         peak_quant[[p]]$Peak_rt_with_background[,c] <- (signal_background[,7]+signal_background[,8])/2
         peak_quant[[p]]$Peak_mz_with_background[,c] <- (signal_background[,5]+signal_background[,6])/2
         peak_quant[[p]]$num_peaks_with_background[,c] <- signal_background[,9]
@@ -4940,7 +4940,7 @@ requantify_features <- function(path_to_features,path_to_mzXML=NA,path_to_MaxQ_o
       features_intensity <- as.matrix(features_intensity)
       Ioncount_feature_sample_matrix <- as.matrix(Ioncount_feature_sample_matrix)
       feature_with_background_intensity <- as.matrix(feature_with_background_intensity)
-      Ioncount_feature_with_background_intensity <- as.matrix(Ioncount_feature_with_background_intensity)
+      Ioncount_feat_w_background_intensity <- as.matrix(Ioncount_feat_w_background_intensity)
 
       ###prepare matrix in which we store decisions which peaks where used for quantification
       peak_selected <- matrix(ncol=ncol(feature_with_background_intensity),nrow=nrow(feature_with_background_intensity))
@@ -4951,7 +4951,7 @@ requantify_features <- function(path_to_features,path_to_mzXML=NA,path_to_MaxQ_o
       features_intensity[selection] <- as.matrix(peak_quant$Standard$features_intensity)[selection]
       Ioncount_feature_sample_matrix[selection] <- as.matrix(peak_quant$Standard$Ioncount_feature_sample_matrix)[selection]
       feature_with_background_intensity[selection] <- as.matrix(peak_quant$Standard$feature_with_background_intensity)[selection]
-      Ioncount_feature_with_background_intensity[selection] <- as.matrix(peak_quant$Standard$Ioncount_feature_with_background_intensity)[selection]
+      Ioncount_feat_w_background_intensity[selection] <- as.matrix(peak_quant$Standard$Ioncount_feat_w_background_intensity)[selection]
       peak_selected[selection] <- num_peaks_store+1 ###standard window
 
       ###next, transfer all quantification data from Peak1 for quantifications where correct peak is known
@@ -4959,7 +4959,7 @@ requantify_features <- function(path_to_features,path_to_mzXML=NA,path_to_MaxQ_o
       features_intensity[selection] <- as.matrix(peak_quant$Peak_1$features_intensity)[selection]
       Ioncount_feature_sample_matrix[selection] <- as.matrix(peak_quant$Peak_1$Ioncount_feature_sample_matrix)[selection]
       feature_with_background_intensity[selection] <- as.matrix(peak_quant$Peak_1$feature_with_background_intensity)[selection]
-      Ioncount_feature_with_background_intensity[selection] <- as.matrix(peak_quant$Peak_1$Ioncount_feature_with_background_intensity)[selection]
+      Ioncount_feat_w_background_intensity[selection] <- as.matrix(peak_quant$Peak_1$Ioncount_feat_w_background_intensity)[selection]
       peak_selected[selection] <- 1 ###closest peak = peak 1
 
       ###if no peak is know, change from NA to 0
@@ -4969,7 +4969,7 @@ requantify_features <- function(path_to_features,path_to_mzXML=NA,path_to_MaxQ_o
       features_intensity <- base::as.data.frame(features_intensity)
       Ioncount_feature_sample_matrix <- base::as.data.frame(Ioncount_feature_sample_matrix)
       feature_with_background_intensity <- base::as.data.frame(feature_with_background_intensity)
-      Ioncount_feature_with_background_intensity <- base::as.data.frame(Ioncount_feature_with_background_intensity)
+      Ioncount_feat_w_background_intensity <- base::as.data.frame(Ioncount_feat_w_background_intensity)
       peak_selected <- base::as.data.frame(peak_selected)
 
       ###For the next step of peak quantifications where true peak is not known we will need RT and mz correction factors per feature
@@ -5030,8 +5030,8 @@ requantify_features <- function(path_to_features,path_to_mzXML=NA,path_to_MaxQ_o
                           mz_correction_factors = mz_correction_factors[start:end,],
                           features_intensity_sample = features_intensity[start:end,s,drop=F],
                           Ioncount_sample = Ioncount_feature_sample_matrix[start:end,s,drop=F],
-                          feature_with_background_intensity_sample = feature_with_background_intensity[start:end,s,drop=F],
-                          Ioncount_with_background_sample = Ioncount_feature_with_background_intensity[start:end,s,drop=F],
+                          feat_w_bkgrnd_inty_samp = feature_with_background_intensity[start:end,s,drop=F],
+                          Ioncount_with_background_sample = Ioncount_feat_w_background_intensity[start:end,s,drop=F],
                           peak_selected_sample = peak_selected[start:end,s,drop=F],
                           delta_mz = delta_mz,
                           delta_rt = delta_rt,
@@ -5046,8 +5046,8 @@ requantify_features <- function(path_to_features,path_to_mzXML=NA,path_to_MaxQ_o
         {
           data.table::set(features_intensity,as.integer(start:end),c,res[[c]]$features_intensity_sample)
           data.table::set(Ioncount_feature_sample_matrix,as.integer(start:end),c,res[[c]]$Ioncount_sample)
-          data.table::set(feature_with_background_intensity,as.integer(start:end),c,res[[c]]$feature_with_background_intensity_sample)
-          data.table::set(Ioncount_feature_with_background_intensity,as.integer(start:end),c,res[[c]]$Ioncount_with_background_sample)
+          data.table::set(feature_with_background_intensity,as.integer(start:end),c,res[[c]]$feat_w_bkgrnd_inty_samp)
+          data.table::set(Ioncount_feat_w_background_intensity,as.integer(start:end),c,res[[c]]$Ioncount_with_background_sample)
           data.table::set(peak_selected,as.integer(start:end),c,res[[c]]$peak_selected_sample)
         }
 
@@ -5064,7 +5064,7 @@ requantify_features <- function(path_to_features,path_to_mzXML=NA,path_to_MaxQ_o
     rownames(features_intensity) <- features$Feature_name
     rownames(Ioncount_feature_sample_matrix) <- features$Feature_name
     rownames(feature_with_background_intensity) <- features$Feature_name
-    rownames(Ioncount_feature_with_background_intensity) <- features$Feature_name
+    rownames(Ioncount_feat_w_background_intensity) <- features$Feature_name
 
     setwd(path_to_features)
     dir.create("Temporary_files")
@@ -5074,7 +5074,7 @@ requantify_features <- function(path_to_features,path_to_mzXML=NA,path_to_MaxQ_o
          features_intensity,
          Ioncount_feature_sample_matrix,
          feature_with_background_intensity,
-         Ioncount_feature_with_background_intensity,
+         Ioncount_feat_w_background_intensity,
          peak_selected,
          peak_quant,
          QC_data,
@@ -5153,7 +5153,7 @@ requantify_features <- function(path_to_features,path_to_mzXML=NA,path_to_MaxQ_o
   ###perform this for signal intensities and background+signal intensities
   #Signal+Background quantification
 
-  decoy_ion_count <- as.numeric(as.matrix(Ioncount_feature_with_background_intensity[which(features$target_decoy == "decoy" & !grepl("_d_i",features$Feature_name) & features$overlapping_decoys == F),]))
+  decoy_ion_count <- as.numeric(as.matrix(Ioncount_feat_w_background_intensity[which(features$target_decoy == "decoy" & !grepl("_d_i",features$Feature_name) & features$overlapping_decoys == F),]))
   decoy_ion_count[is.na(decoy_ion_count)] <- 0
 
   ###add a count of 1 for log scale
@@ -5164,9 +5164,9 @@ requantify_features <- function(path_to_features,path_to_mzXML=NA,path_to_MaxQ_o
   sd_decoy_count <- stats::sd(base::log2(decoy_ion_count))
 
   ###Prepare for testing if observed ion counts of target features is significantly higher than for decoy ions (just random peak selection)
-  target_ion_counts <- Ioncount_feature_with_background_intensity
+  target_ion_counts <- Ioncount_feat_w_background_intensity
   rows <- nrow(target_ion_counts)
-  rownames(target_ion_counts) <- rownames(Ioncount_feature_with_background_intensity)
+  rownames(target_ion_counts) <- rownames(Ioncount_feat_w_background_intensity)
   target_ion_counts <- as.matrix(target_ion_counts)
   ###add 1 for log scale
   target_ion_counts <- target_ion_counts + 1
@@ -5329,7 +5329,7 @@ requantify_features <- function(path_to_features,path_to_mzXML=NA,path_to_MaxQ_o
   peaks <- base::data.frame(RT=unlist(sapply(peak_quant, function(x) x$Peak_rt_with_background)),
                       mz=unlist(sapply(peak_quant, function(x) x$Peak_mz_with_background)),
                       known=unlist(sapply(peak_quant, function(x) x$correct_peak_with_background)),
-                      ion_count=unlist(sapply(peak_quant, function(x) x$Ioncount_feature_with_background_intensity)),
+                      ion_count=unlist(sapply(peak_quant, function(x) x$Ioncount_feat_w_background_intensity)),
                       intensity=unlist(sapply(peak_quant, function(x) x$feature_with_background_intensity)))
   peaks$sample <- rep(sort(rep(samples,nrow(features))),length(peak_quant))
   peaks$feature <- rep(features$Feature_name,length(peak_quant)*length(samples))
@@ -5805,7 +5805,7 @@ requantify_features <- function(path_to_features,path_to_mzXML=NA,path_to_MaxQ_o
                        features_intensity=features_intensity,
                        Ioncount_feature_sample_matrix=Ioncount_feature_sample_matrix,
                        feature_with_background_intensity=feature_with_background_intensity,
-                       Ioncount_feature_with_background_intensity=Ioncount_feature_with_background_intensity,
+                       Ioncount_feat_w_background_intensity=Ioncount_feat_w_background_intensity,
                        peak_selected=peak_selected,
                        S2B=S2B,
                        pval_signal_with_background_quant=pval_signal_with_background_quant,
@@ -5827,7 +5827,7 @@ requantify_features <- function(path_to_features,path_to_mzXML=NA,path_to_MaxQ_o
   # Ioncount_feature_sample_matrix <- temp_results$Ioncount_feature_sample_matrix
   # feature_with_background_intensity <- temp_results$feature_with_background_intensity
   # feature_with_background_intensity_imputed <- temp_results$feature_with_background_intensity_imputed
-  # Ioncount_feature_with_background_intensity <- temp_results$Ioncount_feature_with_background_intensity
+  # Ioncount_feat_w_background_intensity <- temp_results$Ioncount_feat_w_background_intensity
   # peak_selected <- temp_results$peak_selected
   # S2B <- temp_results$S2B
   # pval_signal_with_background_quant <- temp_results$pval_signal_with_background_quant
@@ -5843,7 +5843,7 @@ requantify_features <- function(path_to_features,path_to_mzXML=NA,path_to_MaxQ_o
     features<-features[selection,]
     Ioncount_feature_sample_matrix<-Ioncount_feature_sample_matrix[selection,]
     feature_with_background_intensity<-feature_with_background_intensity[selection,]
-    Ioncount_feature_with_background_intensity<-Ioncount_feature_with_background_intensity[selection,]
+    Ioncount_feat_w_background_intensity<-Ioncount_feat_w_background_intensity[selection,]
     peak_selected<-peak_selected[selection,]
     S2B<-S2B[selection,]
     pval_signal_with_background_quant<-pval_signal_with_background_quant[selection,]
@@ -5862,7 +5862,7 @@ requantify_features <- function(path_to_features,path_to_mzXML=NA,path_to_MaxQ_o
     features<-features[-selection,]
     Ioncount_feature_sample_matrix<-Ioncount_feature_sample_matrix[-selection,]
     feature_with_background_intensity<-feature_with_background_intensity[-selection,]
-    Ioncount_feature_with_background_intensity<-Ioncount_feature_with_background_intensity[-selection,]
+    Ioncount_feat_w_background_intensity<-Ioncount_feat_w_background_intensity[-selection,]
     peak_selected<-peak_selected[-selection,]
     S2B<-S2B[-selection,]
     pval_signal_with_background_quant<-pval_signal_with_background_quant[-selection,]
@@ -5911,7 +5911,7 @@ requantify_features <- function(path_to_features,path_to_mzXML=NA,path_to_MaxQ_o
     Ioncount_feature_sample_matrix<-Ioncount_feature_sample_matrix[-selection,]
     feature_with_background_intensity<-feature_with_background_intensity[-selection,]
     feature_with_background_intensity_imputed<-feature_with_background_intensity_imputed[-selection,]
-    Ioncount_feature_with_background_intensity<-Ioncount_feature_with_background_intensity[-selection,]
+    Ioncount_feat_w_background_intensity<-Ioncount_feat_w_background_intensity[-selection,]
     peak_selected<-peak_selected[-selection,]
     S2B<-S2B[-selection,]
     pval_signal_with_background_quant<-pval_signal_with_background_quant[-selection,]
@@ -5982,7 +5982,7 @@ requantify_features <- function(path_to_features,path_to_mzXML=NA,path_to_MaxQ_o
   #                features_intensity=features_intensity[selection,],
   #                Ioncount_feature_sample_matrix=Ioncount_feature_sample_matrix[selection,],
   #                feature_with_background_intensity=feature_with_background_intensity[selection,],
-  #                Ioncount_feature_with_background_intensity=Ioncount_feature_with_background_intensity[selection,],
+  #                Ioncount_feat_w_background_intensity=Ioncount_feat_w_background_intensity[selection,],
   #                Alignment_scores=Alignment_scores[selection,],
   #                Quant_pvals_signal_with_background=Quant_pvals_signal_with_background[selection,])
   #
@@ -6056,7 +6056,7 @@ requantify_features <- function(path_to_features,path_to_mzXML=NA,path_to_MaxQ_o
   #                           Ioncount_feature_sample_matrix=Ioncount_feature_sample_matrix[remove_list,],
   #                           feature_with_background_intensity=feature_with_background_intensity[remove_list,],
   #                           feature_with_background_intensity_imputed=feature_with_background_intensity_imputed[remove_list,],
-  #                           Ioncount_feature_with_background_intensity=Ioncount_feature_with_background_intensity[remove_list,],
+  #                           Ioncount_feat_w_background_intensity=Ioncount_feat_w_background_intensity[remove_list,],
   #                           Alignment_scores=Alignment_scores[remove_list,],
   #                           Quant_pvals_signal_with_background=Quant_pvals_signal_with_background[remove_list,])
   #     save(excluded_PMPs,file = "excluded_PMPs.RData")
@@ -6067,7 +6067,7 @@ requantify_features <- function(path_to_features,path_to_mzXML=NA,path_to_MaxQ_o
   #     Ioncount_feature_sample_matrix<-Ioncount_feature_sample_matrix[-remove_list,]
   #     feature_with_background_intensity<-feature_with_background_intensity[-remove_list,]
   #     feature_with_background_intensity_imputed<-feature_with_background_intensity_imputed[-remove_list,]
-  #     Ioncount_feature_with_background_intensity<-Ioncount_feature_with_background_intensity[-remove_list,]
+  #     Ioncount_feat_w_background_intensity<-Ioncount_feat_w_background_intensity[-remove_list,]
   #     Alignment_scores<-Alignment_scores[-remove_list,]
   #     Quant_pvals_signal_with_background<-Quant_pvals_signal_with_background[-remove_list,]
   #   }
@@ -6088,7 +6088,7 @@ requantify_features <- function(path_to_features,path_to_mzXML=NA,path_to_MaxQ_o
   #     Ioncount_feature_sample_matrix<-Ioncount_feature_sample_matrix[-remove_list,]
   #     feature_with_background_intensity<-feature_with_background_intensity[-remove_list,]
   #     feature_with_background_intensity_imputed<-feature_with_background_intensity_imputed[-remove_list,]
-  #     Ioncount_feature_with_background_intensity<-Ioncount_feature_with_background_intensity[-remove_list,]
+  #     Ioncount_feat_w_background_intensity<-Ioncount_feat_w_background_intensity[-remove_list,]
   #     Alignment_scores<-Alignment_scores[-remove_list,]
   #     Quant_pvals_signal_with_background<-Quant_pvals_signal_with_background[-remove_list,]
   #   }
@@ -6100,7 +6100,7 @@ requantify_features <- function(path_to_features,path_to_mzXML=NA,path_to_MaxQ_o
   # utils::write.table(Ioncount_feature_sample_matrix,base::paste("Features_quantification_ion_counts_signal_only",output_file_names_add,".txt",sep=""))
   # utils::write.table(feature_with_background_intensity,base::paste("Features_quantification_signal_background",output_file_names_add,".txt",sep=""))
   # utils::write.table(feature_with_background_intensity,base::paste("Features_quantification_signal_background_imputed",output_file_names_add,".txt",sep=""))
-  # utils::write.table(Ioncount_feature_with_background_intensity,base::paste("Features_quantification_ion_count_signal_background",output_file_names_add,".txt",sep=""))
+  # utils::write.table(Ioncount_feat_w_background_intensity,base::paste("Features_quantification_ion_count_signal_background",output_file_names_add,".txt",sep=""))
   # utils::write.table(Alignment_scores,base::paste("Alignment_scores",output_file_names_add,".txt",sep=""))
   # utils::write.table(Quant_pvals_signal_with_background,base::paste("Features_quantification_pvals_signal_background",output_file_names_add,".txt",sep=""))
   #
@@ -6113,7 +6113,7 @@ requantify_features <- function(path_to_features,path_to_mzXML=NA,path_to_MaxQ_o
                        Ioncount_feature_sample_matrix=Ioncount_feature_sample_matrix,
                        feature_with_background_intensity=feature_with_background_intensity,
                        feature_with_background_intensity_imputed=feature_with_background_intensity_imputed,
-                       Ioncount_feature_with_background_intensity=Ioncount_feature_with_background_intensity,
+                       Ioncount_feat_w_background_intensity=Ioncount_feat_w_background_intensity,
                        peak_selected=peak_selected,
                        S2B=S2B,
                        pval_signal_with_background_quant=pval_signal_with_background_quant,
@@ -6140,7 +6140,7 @@ requantify_features <- function(path_to_features,path_to_mzXML=NA,path_to_MaxQ_o
   # Ioncount_feature_sample_matrix <- temp_results$Ioncount_feature_sample_matrix
   # feature_with_background_intensity <- temp_results$feature_with_background_intensity
   # feature_with_background_intensity_imputed <- temp_results$feature_with_background_intensity_imputed
-  # Ioncount_feature_with_background_intensity <- temp_results$Ioncount_feature_with_background_intensity
+  # Ioncount_feat_w_background_intensity <- temp_results$Ioncount_feat_w_background_intensity
   # peak_selected <- temp_results$peak_selected
   # S2B <- temp_results$S2B
   # pval_signal_with_background_quant <- temp_results$pval_signal_with_background_quant
@@ -7595,7 +7595,7 @@ requantify_features <- function(path_to_features,path_to_mzXML=NA,path_to_MaxQ_o
   utils::write.table(x = feature_with_background_intensity,file = base::paste(path_to_features,"/Features_quantification",output_file_names_add,".tab",sep=""),row.names = T,sep = "\t")
   utils::write.table(x = feature_with_background_intensity_imputed,file = base::paste(path_to_features,"/Features_quantification_imputed",output_file_names_add,".tab",sep=""),row.names = T,sep = "\t")
   utils::write.table(x = pval_signal_with_background_quant,file = base::paste(path_to_features,"/Features_quantification_pvals",output_file_names_add,".tab",sep=""),row.names = T,sep = "\t")
-  utils::write.table(x = Ioncount_feature_with_background_intensity,file = base::paste(path_to_features,"/Features_quantification_ioncount",output_file_names_add,".tab",sep=""),row.names = T,sep = "\t")
+  utils::write.table(x = Ioncount_feat_w_background_intensity,file = base::paste(path_to_features,"/Features_quantification_ioncount",output_file_names_add,".tab",sep=""),row.names = T,sep = "\t")
   utils::write.table(x = S2B,file = base::paste(path_to_features,"/Features_quantification_S2B",output_file_names_add,".tab",sep=""),row.names = T,sep = "\t")
   utils::write.table(x = alignment_variability_score,file = base::paste(path_to_features,"/Features_quantification_variability_score",output_file_names_add,".tab",sep=""),row.names = T,sep = "\t")
   utils::write.table(x = alignment_scores_peaks_correct,file = base::paste(path_to_features,"/Features_quantification_alignment_score",output_file_names_add,".tab",sep=""),row.names = T,sep = "\t")
@@ -7615,7 +7615,8 @@ requantify_features <- function(path_to_features,path_to_mzXML=NA,path_to_MaxQ_o
 #' @param mz_correction_factors mz corrections
 #' @param features_intensity_sample features_intensity_sample
 #' @param Ioncount_sample Ioncount_sample
-#' @param feature_with_background_intensity_sample feature_with_background_intensity_sample
+#' @param feat_w_bkgrnd_inty_samp
+#' feat_w_bkgrnd_inty_samp
 #' @param Ioncount_with_background_sample Ioncount_with_background_sample
 #' @param peak_selected_sample peak_selected_sample
 #' @param delta_mz delta_mz
@@ -7627,415 +7628,503 @@ requantify_features <- function(path_to_features,path_to_mzXML=NA,path_to_MaxQ_o
 #' @import data.table
 #' @export
 #' @details Peak decision algorithm
-peak_decision <- function(features_select,peak_quant,samples,s,RT_correction_factors,mz_correction_factors,features_intensity_sample,Ioncount_sample,feature_with_background_intensity_sample,Ioncount_with_background_sample,peak_selected_sample,delta_mz,delta_rt,peak_min_ion_count,chunk=NULL,num_chunks=NULL,progress=T)
-{
-  #prevent issues during R CMD check
-  ..s <- s
-  rm(..s)
-  ..known_peaks_indices <- 1
-  rm(..known_peaks_indices)
-  ..o <- 1
-  rm(..o)
+peak_decision <- function(features_select, peak_quant, samples, s,
+                          RT_correction_factors, mz_correction_factors,
+                          features_intensity_sample, Ioncount_sample,
+                          feat_w_bkgrnd_inty_samp,
+                          Ioncount_with_background_sample, peak_selected_sample,
+                          delta_mz, delta_rt, peak_min_ion_count, chunk=NULL,
+                          num_chunks=NULL, progress=TRUE){
+    # Prevent issues during R CMD check
+    ..s <- s
+    rm(..s)
+    ..known_peaks_indices <- 1
+    rm(..known_peaks_indices)
+    ..o <- 1
+    rm(..o)
 
-  #suppressWarnings(suppressMessages(library(data.table,quietly = T)))
-  #suppressWarnings(suppressMessages(library(lubridate,quietly = T)))
-  if(progress == T)
-  {
-    pb <- tcltk::tkProgressBar(title = base::paste("Prepare for peak selection -",samples[s]),label=base::paste( round(0/1*100, 0),"% done"), min = 0,max = 1, width = 300)
-    close(pb)
-  }
-
-  ###next, decide for all other feature quantifications for which at least 1 peak was available which peak quantification should be used
-  max <- nrow(features_select)
-
-  if(progress == T)
-  {
-    if(!is.null(chunk) & !is.null(num_chunks))
-    {
-      pb <- tcltk::tkProgressBar(title = base::paste("Select peaks (",chunk,"/",num_chunks,") - ",samples[s],sep=""),label=base::paste( round(0/max*100, 0),"% done"), min = 0,max = max, width = 300)
-    }else
-    {
-      pb <- tcltk::tkProgressBar(title = base::paste("Select peaks -",samples[s]),label=base::paste( round(0/max*100, 0),"% done"), min = 0,max = max, width = 300)
+    if(progress == TRUE){
+        title <- base::paste("Prepare for peak selection -", samples[s])
+        label <- base::paste(round(0 / 1 * 100, 0), "% done")
+        pb <- tcltk::tkProgressBar(title=title, label=label, min=0, max=1,
+                                   width=300)
+        close(pb)
     }
-  }
 
-  start_time <- Sys.time()
-  updatecounter <- 0
-  time_require <- 0
+    # Next, decide for all other feature quantifications for which at least 1
+    # peak was available which peak quantification should be used
+    max <- nrow(features_select)
 
-  for(i in 1:nrow(features_select))
-  {
-    num_detected_peaks <- ifelse(!is.na(peak_quant$Standard$num_peaks_with_background[i,..s]),as.numeric(peak_quant$Standard$num_peaks_with_background[i,..s]),
-                                 ifelse(!is.na(peak_quant$Peak_1$num_peaks_with_background[i,..s]),as.numeric(peak_quant$Peak_1$num_peaks_with_background[i,..s]),NA))
-    if(!is.na(num_detected_peaks)) ##peaks detected?
-    {
-      ###check if more than 1 peak was detected and true peak is unknown
-      if(num_detected_peaks > 1)
-      {
-        # if(!is.na(peak_quant$Peak_1$correct_peak_with_background[i,..s]) & peak_quant$Peak_1$correct_peak_with_background[i,..s] == 1) ###correct peak is known so take the closest peak
-        # {
-        #   ###already done in batch before
-        #   ###so nothing to be done here
-        #
-        #   # data.table::set(features_intensity_sample,i = as.integer(i),j = as.integer(1),value = as.numeric(peak_quant$Peak_1$features_intensity[i,..s]))
-        #   # data.table::set(Ioncount_sample,i = as.integer(i),j = as.integer(1),value = as.numeric(peak_quant$Peak_1$Ioncount_feature_sample_matrix[i,..s]))
-        #   # data.table::set(feature_with_background_intensity_sample,i = as.integer(i),j = as.integer(1),value = as.numeric(peak_quant$Peak_1$feature_with_background_intensity[i,..s]))
-        #   # data.table::set(Ioncount_with_background_sample,i = as.integer(i),j = as.integer(1),value = as.numeric(peak_quant$Peak_1$Ioncount_feature_with_background_intensity[i,..s]))
-        #   #
-        #   # data.table::set(dT1_sample,i = as.integer(i),j = as.integer(1),value = as.numeric(peak_quant$Peak_1$dT1[i,..s]))
-        #   # data.table::set(dM1_sample,i = as.integer(i),j = as.integer(1),value = as.numeric(peak_quant$Peak_1$dM1[i,..s]))
-        #
-        # }
-        if(peak_quant$Peak_1$correct_peak_with_background[i,..s] == 0) ###more than 1 peaks but true peak not known
-        {
-          ###check if for any sample the correct peak is known
-          num_known_peaks <- length(which(peak_quant$Peak_1$correct_peak_with_background[i,] != 0))
-          if(num_known_peaks > 0)
-          {
-            ###now check where correct known peak usually is located in samples were true location is known
-            known_peaks_indices <- which(peak_quant$Peak_1$correct_peak_with_background[i,] == 1)
-
-            RT_in_known <- as.numeric(peak_quant$Peak_1$Peak_rt_with_background[i,..known_peaks_indices])
-            mz_in_known <- as.numeric(peak_quant$Peak_1$Peak_mz_with_background[i,..known_peaks_indices])
-
-            ###get RT and mz for detected peaks in current sample
-            detected_peaks_rt <- vector("numeric",as.numeric(num_detected_peaks))
-            detected_peaks_mz <- vector("numeric",as.numeric(num_detected_peaks))
-
-            names(detected_peaks_rt) <- 1:as.numeric(num_detected_peaks)
-            names(detected_peaks_mz) <- 1:as.numeric(num_detected_peaks)
-
-            for(p in 1:length(detected_peaks_rt))
-            {
-              detected_peaks_rt[p] <- as.numeric(peak_quant[[p]]$Peak_rt_with_background[i,..s])
-              detected_peaks_mz[p] <- as.numeric(peak_quant[[p]]$Peak_mz_with_background[i,..s])
-            }
-
-            if(length(which(!is.na(detected_peaks_rt) & !is.na(detected_peaks_mz))) > 0)
-            {
-              detected_peaks_rt <- detected_peaks_rt[which(!is.na(detected_peaks_rt))]
-              detected_peaks_mz <- detected_peaks_mz[which(!is.na(detected_peaks_mz))]
-
-              ###now compare observed deviations in RT and mz for known peaks with the deviation for the potential peaks in current sample
-              ###for this comparison we have to correct detected peaks RT and m/z with the RT and mz correction factors per corresponding sample
-              ###otherwise it would be possible that current sample shows e.g. a global RT shift which could result in a major deviation from all other known samples
-              ###thus a peak wouldn?t be selected although it e.g. perfectly lies close to the expected window
-              RT_in_known_corrected <- as.numeric(RT_in_known - RT_correction_factors[i,known_peaks_indices])
-              mz_in_known_corrected <- as.numeric(mz_in_known - mz_correction_factors[i,known_peaks_indices])
-
-              detected_peaks_rt_corrected <- as.numeric(detected_peaks_rt - RT_correction_factors[i,s])
-              detected_peaks_mz_corrected <- as.numeric(detected_peaks_mz - mz_correction_factors[i,s])
-              names(detected_peaks_rt_corrected) <- names(detected_peaks_rt)
-              names(detected_peaks_mz_corrected) <- names(detected_peaks_mz)
-              ###check if the detected RT and mz of peaks are likely to be belonging to the same population (compared to known peaks)
-              ###99 % of observed data points lie within 2*sd range --> if delta RT or delta mZ > 2*sd then most likely this is the wrong peak
-              ###so we assume all peaks within this RT and mz deviation to be valid peak candidates
-              ###if these deviations are smaller then the expected RT and mz window, we expand these acceptance criteria accordingly
-              delta_RT_cut <- 3*stats::sd(RT_in_known_corrected,na.rm=T)
-              if(is.na(delta_RT_cut) | delta_RT_cut < 2*delta_rt)delta_RT_cut <- 2*delta_rt
-              delta_mz_cut <- 3*stats::sd(mz_in_known_corrected,na.rm=T)
-              if(is.na(delta_mz_cut) | delta_mz_cut < 3*delta_mz)delta_mz_cut <- 3*delta_mz
-
-              within_range <- ifelse(abs(detected_peaks_rt_corrected-mean(RT_in_known_corrected,na.rm=T)) <= delta_RT_cut &
-                                       abs(detected_peaks_mz_corrected-mean(mz_in_known_corrected,na.rm=T)) <= delta_mz_cut,T,F)
-
-              if(any(within_range))
-              {
-                detected_peaks_rt <- detected_peaks_rt[within_range]
-                detected_peaks_mz <- detected_peaks_mz[within_range]
-                detected_peaks_rt_corrected <- detected_peaks_rt_corrected[within_range]
-                detected_peaks_mz_corrected <- detected_peaks_mz_corrected[within_range]
-
-                ###now check that at the position of the potential peak no other peak is present in samples with known peak
-                count_other_peaks <- sum(peak_quant$Peak_1$num_peaks_with_background[i,..known_peaks_indices]-1)
-                if(count_other_peaks > 0)
-                {
-                  other_peaks <- base::as.data.frame(matrix(ncol=6,nrow=count_other_peaks,0))
-                  counter <- 0
-
-                  for(o in known_peaks_indices) ###collect peak data for all additional peaks in samples were peak was known
-                  {
-                    cur_peak_count <- as.numeric(peak_quant$Peak_1$num_peaks_with_background[i,..o]-1)
-                    if(cur_peak_count > 0)
-                    {
-                      for(p in 1:cur_peak_count)
-                      {
-                        counter <- counter + 1
-                        temp <- c(as.numeric(peak_quant[[p+1]]$Peak_mz_with_background[i,..o] - mz_correction_factors[i,o]),
-                                  as.numeric(peak_quant[[p+1]]$Peak_rt_with_background[i,..o] - RT_correction_factors[i,o]),
-                                  as.numeric(peak_quant[[p+1]]$feature_with_background_intensity[i,..o]),
-                                  as.numeric(peak_quant[[p+1]]$Ioncount_feature_with_background_intensity[i,..o]))
-                        ##Add distance in RT and mz to known peak
-                        temp[5:6] <- c(abs(temp[1] - as.numeric(peak_quant[[1]]$Peak_mz_with_background[i,..o] - mz_correction_factors[i,o])),
-                                       abs(temp[2] - as.numeric(peak_quant[[1]]$Peak_rt_with_background[i,..o] - RT_correction_factors[i,o])))
-
-                        data.table::set(other_peaks,as.integer(counter),as.integer(1:6),value=list(temp[1],temp[2],temp[3],temp[4],temp[5],temp[6]))
-                      }
-                    }
-                  }
-                  #disregard other peaks below significance threshold
-                  other_peaks <- other_peaks[which(other_peaks$V4 > peak_min_ion_count),]
-                  #disregard other peaks which are too close to the expected peak
-                  #cutoff RT: > 1.1* half peak width -> half RT extraction window
-                  #cutoff mz: > 1.1* delta_mz -> half mz extraction window
-                  other_peaks <- other_peaks[which(other_peaks$V5 > delta_mz*1.1 | other_peaks$V6 > ((features_select$RT_length[i]/2)*1.1)),]
-                  ###now check that selected peaks are not close to other peaks in sampels with known peak
-                  overlap <- vector("logical",length(detected_peaks_rt))
-                  for(o in 1:length(detected_peaks_rt))
-                  {
-                    overlap[o] <- ifelse(any(abs(detected_peaks_rt_corrected[o]-other_peaks$V2) <= (delta_rt/2) & abs(detected_peaks_mz_corrected[o]-other_peaks$V1) <= delta_mz/2,na.rm=T),T,F)
-                  }
-                }else
-                {
-                  overlap <- vector("logical",length(detected_peaks_rt))
-                }
-
-                if(any(overlap == F)) ###not overlapping with any other peak
-                {
-                  detected_peaks_rt <- detected_peaks_rt_corrected[which(overlap == F)]
-                  detected_peaks_mz <- detected_peaks_mz_corrected[which(overlap == F)]
-                  RT_in_known_other_peaks <- as.numeric(peak_quant$Peak_1$Peak_rt_with_background[i,..known_peaks_indices])
-                  mz_in_known_other_peaks <- as.numeric(peak_quant$Peak_1$Peak_mz_with_background[i,..known_peaks_indices])
-
-                  ###select the peak which is closest to all other known peaks
-
-                  sum_delta_to_known_peaks_rt <- vector("numeric",length(detected_peaks_rt))
-                  sum_delta_to_known_peaks_mz <- vector("numeric",length(detected_peaks_rt))
-                  sum_delta_to_known_peaks <- vector("numeric",length(detected_peaks_rt))
-                  for(p in 1:length(detected_peaks_rt))
-                  {
-                    sum_delta_to_known_peaks_rt[p] <- sum(detected_peaks_rt[p]-RT_in_known_corrected,na.rm=T)/length(RT_in_known_corrected)
-                    sum_delta_to_known_peaks_mz[p] <- sum((detected_peaks_mz[p]-mz_in_known_corrected)*500,na.rm=T)/length(RT_in_known_corrected)
-                    sum_delta_to_known_peaks[p] <- abs(sum_delta_to_known_peaks_rt[p])+abs(sum_delta_to_known_peaks_mz[p])
-                  }
-
-                  selected_peak <- which(!is.na(sum_delta_to_known_peaks) & sum_delta_to_known_peaks == min(sum_delta_to_known_peaks[which(!is.na(sum_delta_to_known_peaks))],na.rm=T))[1]
-                  selected_peak <- as.numeric(names(detected_peaks_rt)[selected_peak])
-                  data.table::set(features_intensity_sample,i = as.integer(i),j = as.integer(1),value = as.numeric(peak_quant[[selected_peak]]$features_intensity[i,..s]))
-                  data.table::set(Ioncount_sample,i = as.integer(i),j = as.integer(1),value = as.numeric(peak_quant[[selected_peak]]$Ioncount_feature_sample_matrix[i,..s]))
-
-                  data.table::set(feature_with_background_intensity_sample,i = as.integer(i),j = as.integer(1),value = as.numeric(peak_quant[[selected_peak]]$feature_with_background_intensity[i,..s]))
-                  data.table::set(Ioncount_with_background_sample,i = as.integer(i),j = as.integer(1),value = as.numeric(peak_quant[[selected_peak]]$Ioncount_feature_with_background_intensity[i,..s]))
-
-                  data.table::set(peak_selected_sample,i = as.integer(i),j = as.integer(1),value = as.numeric(selected_peak))
-
-                }else###none of the peaks is not overlapping with an other peak detected in other samples where correct peak was known
-                {
-                  data.table::set(features_intensity_sample,i = as.integer(i),j = as.integer(1),value = as.numeric(peak_quant$Standard$features_intensity[i,..s]))
-                  data.table::set(Ioncount_sample,i = as.integer(i),j = as.integer(1),value = as.numeric(peak_quant$Standard$Ioncount_feature_sample_matrix[i,..s]))
-
-                  data.table::set(feature_with_background_intensity_sample,i = as.integer(i),j = as.integer(1),value = as.numeric(peak_quant$Standard$feature_with_background_intensity[i,..s]))
-                  data.table::set(Ioncount_with_background_sample,i = as.integer(i),j = as.integer(1),value = as.numeric(peak_quant$Standard$Ioncount_feature_with_background_intensity[i,..s]))
-
-                  data.table::set(peak_selected_sample,i = as.integer(i),j = as.integer(1),value = as.numeric(length(peak_quant)))
-                }
-
-              }else ###none of the peaks is within the accepted range thus use standard window
-              {
-                data.table::set(features_intensity_sample,i = as.integer(i),j = as.integer(1),value = as.numeric(peak_quant$Standard$features_intensity[i,..s]))
-                data.table::set(Ioncount_sample,i = as.integer(i),j = as.integer(1),value = as.numeric(peak_quant$Standard$Ioncount_feature_sample_matrix[i,..s]))
-
-                data.table::set(feature_with_background_intensity_sample,i = as.integer(i),j = as.integer(1),value = as.numeric(peak_quant$Standard$feature_with_background_intensity[i,..s]))
-                data.table::set(Ioncount_with_background_sample,i = as.integer(i),j = as.integer(1),value = as.numeric(peak_quant$Standard$Ioncount_feature_with_background_intensity[i,..s]))
-
-                data.table::set(peak_selected_sample,i = as.integer(i),j = as.integer(1),value = as.numeric(length(peak_quant)))
-              }
-            }else ###none of the peaks is valid
-            {
-              data.table::set(features_intensity_sample,i = as.integer(i),j = as.integer(1),value = as.numeric(peak_quant$Standard$features_intensity[i,..s]))
-              data.table::set(Ioncount_sample,i = as.integer(i),j = as.integer(1),value = as.numeric(peak_quant$Standard$Ioncount_feature_sample_matrix[i,..s]))
-
-              data.table::set(feature_with_background_intensity_sample,i = as.integer(i),j = as.integer(1),value = as.numeric(peak_quant$Standard$feature_with_background_intensity[i,..s]))
-              data.table::set(Ioncount_with_background_sample,i = as.integer(i),j = as.integer(1),value = as.numeric(peak_quant$Standard$Ioncount_feature_with_background_intensity[i,..s]))
-
-              data.table::set(peak_selected_sample,i = as.integer(i),j = as.integer(1),value = as.numeric(length(peak_quant)))
-            }
-
-
-          }else ###in no other sample the correct peak is known thus take total window
-          {
-            data.table::set(features_intensity_sample,i = as.integer(i),j = as.integer(1),value = as.numeric(peak_quant$Standard$features_intensity[i,..s]))
-            data.table::set(Ioncount_sample,i = as.integer(i),j = as.integer(1),value = as.numeric(peak_quant$Standard$Ioncount_feature_sample_matrix[i,..s]))
-
-            data.table::set(feature_with_background_intensity_sample,i = as.integer(i),j = as.integer(1),value = as.numeric(peak_quant$Standard$feature_with_background_intensity[i,..s]))
-            data.table::set(Ioncount_with_background_sample,i = as.integer(i),j = as.integer(1),value = as.numeric(peak_quant$Standard$Ioncount_feature_with_background_intensity[i,..s]))
-
-            data.table::set(peak_selected_sample,i = as.integer(i),j = as.integer(1),value = as.numeric(length(peak_quant)))
-          }
-        }
-      }else if(num_detected_peaks == 1) ###one peak was detected
-      {
-        ### check if correct peak is unknown
-        if(peak_quant$Peak_1$correct_peak_with_background[i,..s] == 0)
-        {
-          ###if this is the case check if detected peak is comparable to correct peaks in other samples where correct peak was known
-          ###check if for any sample the correct peak is known
-          num_known_peaks <- length(which(peak_quant$Peak_1$correct_peak_with_background[i,] != 0))
-          if(num_known_peaks > 0)
-          {
-            ###now check where correct known peak usually is located in samples were true location is known
-            known_peaks_indices <- which(peak_quant$Peak_1$correct_peak_with_background[i,] == 1)
-
-            RT_in_known <- as.numeric(peak_quant$Peak_1$Peak_rt_with_background[i,..known_peaks_indices])
-            mz_in_known <- as.numeric(peak_quant$Peak_1$Peak_mz_with_background[i,..known_peaks_indices])
-
-            detected_peaks_rt <- as.numeric(peak_quant[[1]]$Peak_rt_with_background[i,..s])
-            detected_peaks_mz <- as.numeric(peak_quant[[1]]$Peak_mz_with_background[i,..s])
-            if(length(which(!is.na(detected_peaks_rt) & !is.na(detected_peaks_mz))) > 0)
-            {
-              detected_peaks_rt <- detected_peaks_rt[which(!is.na(detected_peaks_rt))]
-              detected_peaks_mz <- detected_peaks_mz[which(!is.na(detected_peaks_mz))]
-
-              ###now compare observed deviations in RT and mz for known peaks with the deviation for the potential peaks in current sample
-              ###for this comparison we have to correct detected peaks RT and m/z with the RT and mz correction factors per corresponding sample
-              ###otherwise it would be possible that current sample shows e.g. a global RT shift which could result in a major deviation from all other known samples
-              ###thus a peak wouldn?t be selected although it e.g. perfectly lies close to the expected window
-              RT_in_known_corrected <- as.numeric(RT_in_known - RT_correction_factors[i,known_peaks_indices])
-              mz_in_known_corrected <- as.numeric(mz_in_known - mz_correction_factors[i,known_peaks_indices])
-
-              detected_peaks_rt_corrected <- as.numeric(detected_peaks_rt - RT_correction_factors[i,s])
-              detected_peaks_mz_corrected <- as.numeric(detected_peaks_mz - mz_correction_factors[i,s])
-
-              ###check if the detected RT and mz of peaks are likely to be belonging to the same population (compared to known peaks)
-              ###99 % of observed data points lie within 3*sd range --> if delta RT or delta mZ > 2*sd then most likely this is the wrong peak
-              ###so we assume all peaks within this RT and mz deviation to be valid peak candidates
-              ###if these deviations are smaller then the expected RT and mz window, we expand these acceptance criteria accordingly
-              delta_RT_cut <- 3*stats::sd(RT_in_known,na.rm=T)
-              if(is.na(delta_RT_cut) | delta_RT_cut < 2*delta_rt)delta_RT_cut <- 2*delta_rt
-              delta_mz_cut <- 3*stats::sd(mz_in_known,na.rm=T)
-              if(is.na(delta_mz_cut) | delta_mz_cut < 3*delta_mz)delta_mz_cut <- 3*delta_mz
-
-              within_range <- ifelse(abs(detected_peaks_rt_corrected-mean(RT_in_known_corrected,na.rm=T)) <= delta_RT_cut &
-                                       abs(detected_peaks_mz_corrected-mean(mz_in_known_corrected,na.rm=T)) <= delta_mz_cut,T,F)
-
-              if(any(within_range))
-              {
-                detected_peaks_rt <- detected_peaks_rt[within_range]
-                detected_peaks_mz <- detected_peaks_mz[within_range]
-                detected_peaks_rt_corrected <- detected_peaks_rt_corrected[within_range]
-                detected_peaks_mz_corrected <- detected_peaks_mz_corrected[within_range]
-
-                ###now check that at the position of the potential peak no other peak is present in samples with known peak
-                count_other_peaks <- sum(peak_quant$Peak_1$num_peaks_with_background[i,..known_peaks_indices]-1)
-                if(count_other_peaks > 0)
-                {
-                  other_peaks <- base::as.data.frame(matrix(ncol=6,nrow=count_other_peaks,0))
-                  counter <- 0
-
-                  for(o in known_peaks_indices) ###collect peak data for all additional peaks in samples were peak was known
-                  {
-                    cur_peak_count <- as.numeric(peak_quant$Peak_1$num_peaks_with_background[i,..o]-1)
-                    if(cur_peak_count > 0)
-                    {
-                      for(p in 1:cur_peak_count)
-                      {
-                        counter <- counter + 1
-                        temp <- c(as.numeric(peak_quant[[p+1]]$Peak_mz_with_background[i,..o] - mz_correction_factors[i,o]),
-                                  as.numeric(peak_quant[[p+1]]$Peak_rt_with_background[i,..o] - RT_correction_factors[i,o]),
-                                  as.numeric(peak_quant[[p+1]]$feature_with_background_intensity[i,..o]),
-                                  as.numeric(peak_quant[[p+1]]$Ioncount_feature_with_background_intensity[i,..o]))
-                        ##Add distance in RT and mz to known peak
-                        temp[5:6] <- c(abs(temp[1] - as.numeric(peak_quant[[1]]$Peak_mz_with_background[i,..o] - mz_correction_factors[i,o])),
-                                       abs(temp[2] - as.numeric(peak_quant[[1]]$Peak_rt_with_background[i,..o] - RT_correction_factors[i,o])))
-                      }
-                    }
-                  }
-                  #disregard other peaks below significance threshold
-                  other_peaks <- other_peaks[which(other_peaks$V4 > peak_min_ion_count),]
-                  #disregard other peaks which are too close to the expected peak
-                  #cutoff RT: > 1.1* half peak width -> half RT extraction window
-                  #cutoff mz: > 1.1* delta_mz -> half mz extraction window
-                  other_peaks <- other_peaks[which(other_peaks$V5 > delta_mz*1.1 | other_peaks$V6 > ((features_select$RT_length[i]/2)*1.1)),]
-                  ###now check that selected peaks are not close to other peaks in sampels with known peak
-
-                  overlap <- ifelse(any(abs(detected_peaks_rt_corrected-other_peaks$V2) <= delta_rt/2 & abs(detected_peaks_mz_corrected-other_peaks$V1) <= delta_mz/2,na.rm=T),T,F)
-                }else
-                {
-                  overlap <- F
-                }
-
-                if(any(overlap == F)) ###not overlapping with any other peak
-                {
-                  selected_peak <- 1
-
-                  data.table::set(features_intensity_sample,i = as.integer(i),j = as.integer(1),value = as.numeric(peak_quant[[selected_peak]]$features_intensity[i,..s]))
-                  data.table::set(Ioncount_sample,i = as.integer(i),j = as.integer(1),value = as.numeric(peak_quant[[selected_peak]]$Ioncount_feature_sample_matrix[i,..s]))
-
-                  data.table::set(feature_with_background_intensity_sample,i = as.integer(i),j = as.integer(1),value = as.numeric(peak_quant[[selected_peak]]$feature_with_background_intensity[i,..s]))
-                  data.table::set(Ioncount_with_background_sample,i = as.integer(i),j = as.integer(1),value = as.numeric(peak_quant[[selected_peak]]$Ioncount_feature_with_background_intensity[i,..s]))
-
-                  data.table::set(peak_selected_sample,i = as.integer(i),j = as.integer(1),value = as.numeric(selected_peak))
-                }else###the peak is overlapping with an other peak detected in other samples where correct peak was known
-                {
-                  data.table::set(features_intensity_sample,i = as.integer(i),j = as.integer(1),value = as.numeric(peak_quant$Standard$features_intensity[i,..s]))
-                  data.table::set(Ioncount_sample,i = as.integer(i),j = as.integer(1),value = as.numeric(peak_quant$Standard$Ioncount_feature_sample_matrix[i,..s]))
-
-                  data.table::set(feature_with_background_intensity_sample,i = as.integer(i),j = as.integer(1),value = as.numeric(peak_quant$Standard$feature_with_background_intensity[i,..s]))
-                  data.table::set(Ioncount_with_background_sample,i = as.integer(i),j = as.integer(1),value = as.numeric(peak_quant$Standard$Ioncount_feature_with_background_intensity[i,..s]))
-
-                  data.table::set(peak_selected_sample,i = as.integer(i),j = as.integer(1),value = as.numeric(length(peak_quant)))
-                }
-              }else ###none of the peaks is within the accepted range thus use standard window
-              {
-                data.table::set(features_intensity_sample,i = as.integer(i),j = as.integer(1),value = as.numeric(peak_quant$Standard$features_intensity[i,..s]))
-                data.table::set(Ioncount_sample,i = as.integer(i),j = as.integer(1),value = as.numeric(peak_quant$Standard$Ioncount_feature_sample_matrix[i,..s]))
-
-                data.table::set(feature_with_background_intensity_sample,i = as.integer(i),j = as.integer(1),value = as.numeric(peak_quant$Standard$feature_with_background_intensity[i,..s]))
-                data.table::set(Ioncount_with_background_sample,i = as.integer(i),j = as.integer(1),value = as.numeric(peak_quant$Standard$Ioncount_feature_with_background_intensity[i,..s]))
-
-                data.table::set(peak_selected_sample,i = as.integer(i),j = as.integer(1),value = as.numeric(length(peak_quant)))
-              }
-            }else ###no peak was valid
-            {
-              data.table::set(features_intensity_sample,i = as.integer(i),j = as.integer(1),value = as.numeric(peak_quant$Standard$features_intensity[i,..s]))
-              data.table::set(Ioncount_sample,i = as.integer(i),j = as.integer(1),value = as.numeric(peak_quant$Standard$Ioncount_feature_sample_matrix[i,..s]))
-
-              data.table::set(feature_with_background_intensity_sample,i = as.integer(i),j = as.integer(1),value = as.numeric(peak_quant$Standard$feature_with_background_intensity[i,..s]))
-              data.table::set(Ioncount_with_background_sample,i = as.integer(i),j = as.integer(1),value = as.numeric(peak_quant$Standard$Ioncount_feature_with_background_intensity[i,..s]))
-
-              data.table::set(peak_selected_sample,i = as.integer(i),j = as.integer(1),value = as.numeric(length(peak_quant)))
-            }
-          }else ###in no other sample the correct peak was known thus use the standard window
-          {
-            data.table::set(features_intensity_sample,i = as.integer(i),j = as.integer(1),value = as.numeric(peak_quant$Standard$features_intensity[i,..s]))
-            data.table::set(Ioncount_sample,i = as.integer(i),j = as.integer(1),value = as.numeric(peak_quant$Standard$Ioncount_feature_sample_matrix[i,..s]))
-
-            data.table::set(feature_with_background_intensity_sample,i = as.integer(i),j = as.integer(1),value = as.numeric(peak_quant$Standard$feature_with_background_intensity[i,..s]))
-            data.table::set(Ioncount_with_background_sample,i = as.integer(i),j = as.integer(1),value = as.numeric(peak_quant$Standard$Ioncount_feature_with_background_intensity[i,..s]))
-
-            data.table::set(peak_selected_sample,i = as.integer(i),j = as.integer(1),value = as.numeric(length(peak_quant)))
-          }
-
-
+    if(progress == TRUE){
+        if(!is.null(chunk) & !is.null(num_chunks)){
+            title <- base::paste("Select peaks (", chunk, "/", num_chunks,
+                                 ") - ", samples[s], sep="")
+            label <- base::paste(round(0 / max * 100, 0), "% done")
+            pb <- tcltk::tkProgressBar(title=title, label=label, min=0, max=max,
+                                       width=300)
         }
 
-
-      }
+        else{
+            title <- base::paste("Select peaks -", samples[s])
+            label <- base::paste(round(0 / max * 100, 0), "% done")
+            pb <- tcltk::tkProgressBar(title=title, label=label, min=0, max=max,
+                                       width=300)
+        }
     }
 
-    updatecounter <- updatecounter + 1
-    if(updatecounter >= 10 & progress == T)
-    {
-      time_elapsed <- difftime(Sys.time(),start_time,units="secs")
-      time_require <- (time_elapsed/(i/max))*(1-(i/max))
-      td <- lubridate::seconds_to_period(time_require)
-      time_require <- sprintf('%02d:%02d:%02d', td@hour, lubridate::minute(td), round(lubridate::second(td),digits=0))
+    start_time <- Sys.time()
+    updatecounter <- 0
+    time_require <- 0
 
-      updatecounter <- 0
-      tcltk::setTkProgressBar(pb, i, label=base::paste( round(i/max*100, 0)," % done (",i,"/",max,", Time require: ",time_require,")",sep = ""))
+    for(i in 1:nrow(features_select)){
+        c1 <- !is.na(peak_quant$Standard$num_peaks_with_background[i, ..s])
+        c2 <- as.numeric(peak_quant$Standard$num_peaks_with_background[i, ..s])
+        c3_1 <- !is.na(peak_quant$Peak_1$num_peaks_with_background[i, ..s])
+        c3_2 <- as.numeric(peak_quant$Peak_1$num_peaks_with_background[i, ..s])
+        ndp <- ifelse(c1, c2, ifelse(c3_1, c3_2, NA))
+
+        if(!is.na(ndp)){ # Peaks detected?
+            # Check if more than 1 peak was detected and true peak is unknown
+            if(ndp > 1){
+                # More than 1 peaks but true peak not known
+                if(peak_quant$Peak_1$correct_peak_with_background[i,..s] == 0){
+                    # Check if for any sample the correct peak is known
+                    c1 <- peak_quant$Peak_1$correct_peak_with_background[i, ]
+                    num_known_peaks <- length(which(c1 != 0))
+
+                    if(num_known_peaks > 0){
+                        # Now check where correct known peak usually is located
+                        # in samples were true location is known
+                        pk <- peak_quant$Peak_1
+                        c1 <- pk$correct_peak_with_background[i, ] == 1
+                        kpi <- which(c1)
+
+                        RT_in_known <- pk$Peak_rt_with_background[i, ..kpi]
+                        RT_in_known <- as.numeric(RT_in_known)
+                        mz_in_known <- pk$Peak_mz_with_background[i, ..kpi]
+                        mz_in_known <- as.numeric(mz_in_known)
+
+                        # Get RT and mz for detected peaks in current sample
+                        detected_peaks_rt <- vector("numeric", as.numeric(ndp))
+                        detected_peaks_mz <- vector("numeric", as.numeric(ndp))
+
+                        names(detected_peaks_rt) <- 1:as.numeric(ndp)
+                        names(detected_peaks_mz) <- 1:as.numeric(ndp)
+
+                        for(p in 1:length(detected_peaks_rt)){
+                            pk <- peak_quant[[p]]
+                            dprt <- pk$Peak_rt_with_background[i, ..s]
+                            detected_peaks_rt[p] <- as.numeric(dprt)
+                            dpmz <- pk$Peak_mz_with_background[i, ..s]
+                            detected_peaks_mz[p] <- as.numeric(dpmz)
+                        }
+
+                        # NOTE: Nesting levels are getting ridiculous
+                        # TODO: Ignoring line width limit until proper refactor.
+                        if(length(which(!is.na(detected_peaks_rt)
+                                        & !is.na(detected_peaks_mz))) > 0){
+                            detected_peaks_rt <- detected_peaks_rt[which(!is.na(detected_peaks_rt))]
+                            detected_peaks_mz <- detected_peaks_mz[which(!is.na(detected_peaks_mz))]
+
+                            # Now compare observed deviations in RT and mz for
+                            # known peaks with the deviation for the potential
+                            # peaks in current sample. For this comparison we
+                            # have to correct detected peaks RT and m/z with the
+                            # RT and mz correction factors per corresponding
+                            # sample. Otherwise it would be possible that
+                            # current sample shows e.g. a global RT shift which
+                            # could result in a major deviation from all other
+                            # known samples. Thus a peak wouldn't be selected
+                            # although it e.g. perfectly lies close to the
+                            # expected window
+
+                            RT_in_known_corrected <- as.numeric(RT_in_known - RT_correction_factors[i, kpi])
+                            mz_in_known_corrected <- as.numeric(mz_in_known - mz_correction_factors[i, kpi])
+
+                            detected_peaks_rt_corrected <- as.numeric(detected_peaks_rt - RT_correction_factors[i, s])
+                            detected_peaks_mz_corrected <- as.numeric(detected_peaks_mz - mz_correction_factors[i, s])
+                            names(detected_peaks_rt_corrected) <- names(detected_peaks_rt)
+                            names(detected_peaks_mz_corrected) <- names(detected_peaks_mz)
+                            # Check if the detected RT and mz of peaks are
+                            # likely to be belonging to the same population
+                            # (compared to known peaks). 99 % of observed data
+                            # points lie within 2*sd range --> if delta RT or
+                            # delta mZ > 2*sd then most likely this is the wrong
+                            # peak. So we assume all peaks within this RT and mz
+                            # deviation to be valid peak candidates. If these
+                            # deviations are smaller then the expected RT and mz
+                            # window, we expand these acceptance criteria
+                            # accordingly
+                            delta_RT_cut <- 3 * stats::sd(RT_in_known_corrected, na.rm=TRUE)
+
+                            if(is.na(delta_RT_cut) | delta_RT_cut < 2 * delta_rt){
+                                delta_RT_cut <- 2*delta_rt
+                            }
+
+                            delta_mz_cut <- 3 * stats::sd(mz_in_known_corrected, na.rm=TRUE)
+
+                            if(is.na(delta_mz_cut) | delta_mz_cut < 3 * delta_mz){
+                                delta_mz_cut <- 3 * delta_mz
+                            }
+
+                            dif1 <- abs(detected_peaks_rt_corrected - mean(RT_in_known_corrected, na.rm=TRUE))
+                            dif2 <- abs(detected_peaks_mz_corrected - mean(mz_in_known_corrected, na.rm=TRUE))
+                            within_range <- ifelse(dif1 <= delta_RT_cut & dif2 <= delta_mz_cut, TRUE, FALSE)
+
+                            if(any(within_range)){
+                                detected_peaks_rt <- detected_peaks_rt[within_range]
+                                detected_peaks_mz <- detected_peaks_mz[within_range]
+                                detected_peaks_rt_corrected <- detected_peaks_rt_corrected[within_range]
+                                detected_peaks_mz_corrected <- detected_peaks_mz_corrected[within_range]
+
+                                # Now check that at the position of the
+                                # potential peak no other peak is present in
+                                # samples with known peak
+                                count_other_peaks <- sum(peak_quant$Peak_1$num_peaks_with_background[i, ..kpi] - 1)
+
+                                if(count_other_peaks > 0){
+                                    other_peaks <- base::as.data.frame(matrix(ncol=6, nrow=count_other_peaks, 0))
+                                    counter <- 0
+
+                                    # Collect peak data for all additional peaks
+                                    # in samples were peak was known
+                                    for(o in kpi){
+                                        cur_peak_count <- as.numeric(peak_quant$Peak_1$num_peaks_with_background[i, ..o] - 1)
+
+                                        if(cur_peak_count > 0){
+                                            for(p in 1:cur_peak_count){
+                                                counter <- counter + 1
+                                                temp <- c(as.numeric(peak_quant[[p + 1]]$Peak_mz_with_background[i, ..o] - mz_correction_factors[i, o]),
+                                                          as.numeric(peak_quant[[p + 1]]$Peak_rt_with_background[i, ..o] - RT_correction_factors[i, o]),
+                                                          as.numeric(peak_quant[[p + 1]]$feature_with_background_intensity[i, ..o]),
+                                                          as.numeric(peak_quant[[p + 1]]$Ioncount_feat_w_background_intensity[i, ..o]))
+                                                # Add distance in RT and mz to
+                                                # known peak
+                                                temp[5:6] <- c(abs(temp[1] - as.numeric(peak_quant[[1]]$Peak_mz_with_background[i, ..o] - mz_correction_factors[i, o])),
+                                                               abs(temp[2] - as.numeric(peak_quant[[1]]$Peak_rt_with_background[i, ..o] - RT_correction_factors[i, o])))
+
+                                                data.table::set(other_peaks, as.integer(counter), as.integer(1:6), value=list(temp[1], temp[2], temp[3], temp[4], temp[5], temp[6]))
+                                            }
+                                        }
+                                    }
+
+                                    # Disregard other peaks below significance
+                                    # threshold
+                                    other_peaks <- other_peaks[which(other_peaks$V4 > peak_min_ion_count), ]
+                                    # Disregard other peaks which are too close
+                                    # to the expected peak
+                                    # Cutoff RT: > 1.1 * half peak width -> half RT extraction window
+                                    # Cutoff mz: > 1.1 * delta_mz -> half mz extraction window
+                                    other_peaks <- other_peaks[which(other_peaks$V5 > delta_mz * 1.1 | other_peaks$V6 > ((features_select$RT_length[i] / 2) * 1.1)), ]
+                                    # Now check that selected peaks are not
+                                    # close to other peaks in sampels with known
+                                    # peak
+                                    overlap <- vector("logical", length(detected_peaks_rt))
+
+                                    for(o in 1:length(detected_peaks_rt)){
+                                        overlap[o] <- ifelse(any(abs(detected_peaks_rt_corrected[o] - other_peaks$V2) <= (delta_rt / 2) & abs(detected_peaks_mz_corrected[o] - other_peaks$V1) <= delta_mz / 2, na.rm=TRUE), TRUE, FALSE)
+                                    }
+                                }
+
+                                else{
+                                    overlap <- vector("logical", length(detected_peaks_rt))
+                                }
+
+                                # Not overlapping with any other peak
+                                if(any(overlap == FALSE)){
+                                    detected_peaks_rt <- detected_peaks_rt_corrected[which(overlap == FALSE)]
+                                    detected_peaks_mz <- detected_peaks_mz_corrected[which(overlap == FALSE)]
+                                    RT_in_known_other_peaks <- as.numeric(peak_quant$Peak_1$Peak_rt_with_background[i, ..kpi])
+                                    mz_in_known_other_peaks <- as.numeric(peak_quant$Peak_1$Peak_mz_with_background[i, ..kpi])
+
+                                    # Select the peak which is closest to all other known peaks
+                                    sum_delta_to_known_peaks_rt <- vector("numeric", length(detected_peaks_rt))
+                                    sum_delta_to_known_peaks_mz <- vector("numeric", length(detected_peaks_rt))
+                                    sum_delta_to_known_peaks <- vector("numeric", length(detected_peaks_rt))
+
+                                    for(p in 1:length(detected_peaks_rt)){
+                                        sum_delta_to_known_peaks_rt[p] <- sum(detected_peaks_rt[p] - RT_in_known_corrected, na.rm=TRUE) / length(RT_in_known_corrected)
+                                        sum_delta_to_known_peaks_mz[p] <- sum((detected_peaks_mz[p] - mz_in_known_corrected) * 500, na.rm=TRUE) / length(RT_in_known_corrected)
+                                        sum_delta_to_known_peaks[p] <- abs(sum_delta_to_known_peaks_rt[p]) + abs(sum_delta_to_known_peaks_mz[p])
+                                    }
+
+                                    selected_peak <- which(!is.na(sum_delta_to_known_peaks) & sum_delta_to_known_peaks == min(sum_delta_to_known_peaks[which(!is.na(sum_delta_to_known_peaks))], na.rm=TRUE))[1]
+                                    selected_peak <- as.numeric(names(detected_peaks_rt)[selected_peak])
+                                    data.table::set(features_intensity_sample, i=as.integer(i), j=as.integer(1), value=as.numeric(peak_quant[[selected_peak]]$features_intensity[i, ..s]))
+                                    data.table::set(Ioncount_sample, i=as.integer(i), j=as.integer(1), value=as.numeric(peak_quant[[selected_peak]]$Ioncount_feature_sample_matrix[i, ..s]))
+                                    data.table::set(feat_w_bkgrnd_inty_samp, i=as.integer(i), j=as.integer(1), value=as.numeric(peak_quant[[selected_peak]]$feature_with_background_intensity[i, ..s]))
+                                    data.table::set(Ioncount_with_background_sample, i=as.integer(i), j=as.integer(1), value=as.numeric(peak_quant[[selected_peak]]$Ioncount_feat_w_background_intensity[i, ..s]))
+                                    data.table::set(peak_selected_sample, i=as.integer(i), j=as.integer(1), value=as.numeric(selected_peak))
+                                }
+
+                                # None of the peaks is not overlapping with an
+                                # other peak detected in other samples where
+                                # correct peak was known
+                                else{
+                                    data.table::set(features_intensity_sample, i=as.integer(i), j=as.integer(1), value=as.numeric(peak_quant$Standard$features_intensity[i, ..s]))
+                                    data.table::set(Ioncount_sample, i=as.integer(i), j=as.integer(1), value=as.numeric(peak_quant$Standard$Ioncount_feature_sample_matrix[i, ..s]))
+                                    data.table::set(feat_w_bkgrnd_inty_samp, i=as.integer(i), j=as.integer(1), value=as.numeric(peak_quant$Standard$feature_with_background_intensity[i, ..s]))
+                                    data.table::set(Ioncount_with_background_sample, i=as.integer(i), j=as.integer(1), value=as.numeric(peak_quant$Standard$Ioncount_feat_w_background_intensity[i, ..s]))
+                                    data.table::set(peak_selected_sample, i=as.integer(i), j=as.integer(1), value=as.numeric(length(peak_quant)))
+                                }
+                            }
+
+                            # None of the peaks is within the accepted range
+                            # thus use standard window
+                            else{
+                                data.table::set(features_intensity_sample, i=as.integer(i), j=as.integer(1), value=as.numeric(peak_quant$Standard$features_intensity[i, ..s]))
+                                data.table::set(Ioncount_sample, i=as.integer(i), j=as.integer(1), value=as.numeric(peak_quant$Standard$Ioncount_feature_sample_matrix[i, ..s]))
+                                data.table::set(feat_w_bkgrnd_inty_samp, i=as.integer(i), j=as.integer(1), value=as.numeric(peak_quant$Standard$feature_with_background_intensity[i, ..s]))
+                                data.table::set(Ioncount_with_background_sample, i=as.integer(i), j=as.integer(1), value=as.numeric(peak_quant$Standard$Ioncount_feat_w_background_intensity[i, ..s]))
+                                data.table::set(peak_selected_sample, i=as.integer(i), j=as.integer(1), value=as.numeric(length(peak_quant)))
+                            }
+                        }
+
+                        # None of the peaks is valid
+                        else{
+                            data.table::set(features_intensity_sample, i=as.integer(i), j=as.integer(1), value=as.numeric(peak_quant$Standard$features_intensity[i, ..s]))
+                            data.table::set(Ioncount_sample, i=as.integer(i), j=as.integer(1), value=as.numeric(peak_quant$Standard$Ioncount_feature_sample_matrix[i, ..s]))
+                            data.table::set(feat_w_bkgrnd_inty_samp, i=as.integer(i), j=as.integer(1), value=as.numeric(peak_quant$Standard$feature_with_background_intensity[i, ..s]))
+                            data.table::set(Ioncount_with_background_sample, i=as.integer(i), j=as.integer(1), value=as.numeric(peak_quant$Standard$Ioncount_feat_w_background_intensity[i, ..s]))
+                            data.table::set(peak_selected_sample, i=as.integer(i), j=as.integer(1), value=as.numeric(length(peak_quant)))
+                        }
+                    }
+
+                    # In no other sample the correct peak is known thus take
+                    # total window
+                    else{
+                        pk <- peak_quant$Standard
+                        v <- pk$features_intensity[i, ..s]
+                        data.table::set(features_intensity_sample,
+                                        i=as.integer(i),  j=as.integer(1),
+                                        value=as.numeric(v))
+                        v <- pk$Ioncount_feature_sample_matrix[i, ..s]
+                        data.table::set(Ioncount_sample,
+                                        i=as.integer(i), j=as.integer(1),
+                                        value=as.numeric(v))
+                        v <- pk$feature_with_background_intensity[i, ..s]
+                        data.table::set(feat_w_bkgrnd_inty_samp,
+                                        i=as.integer(i), j=as.integer(1),
+                                        value=as.numeric(v))
+                        v <- pk$Ioncount_feat_w_background_intensity[i, ..s]
+                        data.table::set(Ioncount_with_background_sample,
+                                        i=as.integer(i), j=as.integer(1),
+                                        value=as.numeric(v))
+                        data.table::set(peak_selected_sample,
+                                        i=as.integer(i), j=as.integer(1),
+                                        value=as.numeric(length(peak_quant)))
+                    }
+                }
+            }
+
+            # One peak was detected
+            else if(ndp == 1){
+                # Check if correct peak is unknown
+                if(peak_quant$Peak_1$correct_peak_with_background[i, ..s] == 0){
+                    # If this is the case check if detected peak is comparable
+                    # to correct peaks in other samples where correct peak was
+                    # known
+                    # Check if for any sample the correct peak is known
+                    pk <- peak_quant$Peak_1
+                    cpkwb <- pk$correct_peak_with_background[i,]
+                    num_known_peaks <- length(which(cpkwb != 0))
+
+                    if(num_known_peaks > 0){
+                        # Now check where correct known peak usually is located
+                        # in samples were true location is known
+                        kpi <- which(cpkwb == 1)
+
+                        pkrt <- pk$Peak_rt_with_background[i, ..kpi]
+                        pkmz <- pk$Peak_mz_with_background[i, ..kpi]
+                        RT_in_known <- as.numeric(pkrt)
+                        mz_in_known <- as.numeric(pkmz)
+
+                        pkq_rt <- peak_quant[[1]]$Peak_rt_with_background
+                        pkq_mz <- peak_quant[[1]]$Peak_mz_with_background
+                        detected_peaks_rt <- as.numeric(pkq_rt[i, ..s])
+                        detected_peaks_mz <- as.numeric(pkq_mz[i, ..s])
+
+                        # NOTE: Nesting levels are getting ridiculous
+                        # TODO: Ignoring line width limit until proper refactor.
+                        if(length(which(!is.na(detected_peaks_rt) & !is.na(detected_peaks_mz))) > 0){
+                            detected_peaks_rt <- detected_peaks_rt[which(!is.na(detected_peaks_rt))]
+                            detected_peaks_mz <- detected_peaks_mz[which(!is.na(detected_peaks_mz))]
+
+                            # Now compare observed deviations in RT and mz for
+                            # known peaks with the deviation for the potential
+                            # peaks in current sample. For this comparison we
+                            # have to correct detected peaks RT and m/z with the
+                            # RT and mz correction factors per corresponding
+                            # sample. Otherwise it would be possible that
+                            # current sample shows e.g. a global RT shift which
+                            # could result in a major deviation from all other
+                            # known samples. Thus a peak wouldn't be selected
+                            # although it e.g. perfectly lies close to the
+                            # expected window
+                            RT_in_known_corrected <- as.numeric(RT_in_known - RT_correction_factors[i, kpi])
+                            mz_in_known_corrected <- as.numeric(mz_in_known - mz_correction_factors[i, kpi])
+
+                            detected_peaks_rt_corrected <- as.numeric(detected_peaks_rt - RT_correction_factors[i, s])
+                            detected_peaks_mz_corrected <- as.numeric(detected_peaks_mz - mz_correction_factors[i, s])
+
+                            # Check if the detected RT and mz of peaks are
+                            # likely to be belonging to the same population
+                            # (compared to known peaks). 99 % of observed data
+                            # points lie within 3*sd range --> if delta RT or
+                            # delta mZ > 2*sd then most likely this is the wrong
+                            # peak. So we assume all peaks within this RT and mz
+                            # deviation to be valid peak candidates. If these
+                            # deviations are smaller then the expected RT and mz
+                            # window, we expand these acceptance criteria
+                            # accordingly
+                            delta_RT_cut <- 3 * stats::sd(RT_in_known, na.rm=TRUE)
+
+                            if(is.na(delta_RT_cut) | delta_RT_cut < 2 * delta_rt){
+                                delta_RT_cut <- 2 * delta_rt
+                            }
+
+                            delta_mz_cut <- 3 * stats::sd(mz_in_known, na.rm=TRUE)
+
+                            if(is.na(delta_mz_cut) | delta_mz_cut < 3 * delta_mz){
+                                delta_mz_cut <- 3 * delta_mz
+                            }
+
+                            dif1 <- detected_peaks_rt_corrected - mean(RT_in_known_corrected, na.rm=TRUE)
+                            dif2 <- detected_peaks_mz_corrected - mean(mz_in_known_corrected, na.rm=TRUE)
+                            within_range <- ifelse(abs(dif1) <= delta_RT_cut & abs(dif2) <= delta_mz_cut, TRUE, FALSE)
+
+                            if(any(within_range)){
+                                detected_peaks_rt <- detected_peaks_rt[within_range]
+                                detected_peaks_mz <- detected_peaks_mz[within_range]
+                                detected_peaks_rt_corrected <- detected_peaks_rt_corrected[within_range]
+                                detected_peaks_mz_corrected <- detected_peaks_mz_corrected[within_range]
+
+                                # Now check that at the position of the
+                                # potential peak no other peak is present in
+                                # samples with known peak
+                                count_other_peaks <- sum(peak_quant$Peak_1$num_peaks_with_background[i, ..kpi] - 1)
+                                if(count_other_peaks > 0){
+                                    other_peaks <- base::as.data.frame(matrix(ncol=6, nrow=count_other_peaks, 0))
+                                    counter <- 0
+
+                                    # Collect peak data for all additional peaks
+                                    # in samples were peak was known
+                                    for(o in kpi){
+                                        cur_peak_count <- as.numeric(peak_quant$Peak_1$num_peaks_with_background[i, ..o] - 1)
+
+                                        if(cur_peak_count > 0){
+                                            for(p in 1:cur_peak_count){
+                                                counter <- counter + 1
+                                                temp <- c(as.numeric(peak_quant[[p + 1]]$Peak_mz_with_background[i, ..o] - mz_correction_factors[i, o]),
+                                                          as.numeric(peak_quant[[p + 1]]$Peak_rt_with_background[i, ..o] - RT_correction_factors[i, o]),
+                                                          as.numeric(peak_quant[[p + 1]]$feature_with_background_intensity[i, ..o]),
+                                                          as.numeric(peak_quant[[p + 1]]$Ioncount_feat_w_background_intensity[i, ..o]))
+                                                # Add distance in RT and mz to
+                                                # known peak
+                                                temp[5:6] <- c(abs(temp[1] - as.numeric(peak_quant[[1]]$Peak_mz_with_background[i, ..o] - mz_correction_factors[i, o])),
+                                                               abs(temp[2] - as.numeric(peak_quant[[1]]$Peak_rt_with_background[i, ..o] - RT_correction_factors[i, o])))
+                                            }
+                                        }
+                                    }
+                                    # Disregard other peaks below significance
+                                    # threshold
+                                    other_peaks <- other_peaks[which(other_peaks$V4 > peak_min_ion_count), ]
+                                    # Disregard other peaks which are too close
+                                    # to the expected peak
+                                    # Cutoff RT: > 1.1* half peak width -> half RT extraction window
+                                    # Cutoff mz: > 1.1* delta_mz -> half mz extraction window
+                                    other_peaks <- other_peaks[which(other_peaks$V5 > delta_mz * 1.1 | other_peaks$V6 > ((features_select$RT_length[i] / 2) * 1.1)), ]
+                                    # Now check that selected peaks are not close to other peaks in sampels with known peak
+                                    dif1 <- detected_peaks_rt_corrected - other_peaks$V2
+                                    dif2 <- detected_peaks_mz_corrected - other_peaks$V1
+                                    overlap <- ifelse(any(abs(dif1) <= delta_rt / 2 & abs(dif2) <= delta_mz / 2, na.rm=TRUE), TRUE, FALSE)
+                                }
+
+                                else{
+                                    overlap <- FALSE
+                                }
+
+                                # Not overlapping with any other peak
+                                if(any(overlap == FALSE)){
+                                    selected_peak <- 1
+
+                                    data.table::set(features_intensity_sample, i=as.integer(i), j=as.integer(1), value=as.numeric(peak_quant[[selected_peak]]$features_intensity[i, ..s]))
+                                    data.table::set(Ioncount_sample, i=as.integer(i), j=as.integer(1), value=as.numeric(peak_quant[[selected_peak]]$Ioncount_feature_sample_matrix[i, ..s]))
+                                    data.table::set(feat_w_bkgrnd_inty_samp, i=as.integer(i), j=as.integer(1), value=as.numeric(peak_quant[[selected_peak]]$feature_with_background_intensity[i, ..s]))
+                                    data.table::set(Ioncount_with_background_sample, i=as.integer(i), j=as.integer(1), value=as.numeric(peak_quant[[selected_peak]]$Ioncount_feat_w_background_intensity[i, ..s]))
+                                    data.table::set(peak_selected_sample, i=as.integer(i), j=as.integer(1), value=as.numeric(selected_peak))
+                                }
+
+                                # The peak is overlapping with an other peak
+                                # detected in other samples where correct peak
+                                # was known
+                                else{
+                                    data.table::set(features_intensity_sample, i=as.integer(i), j=as.integer(1), value=as.numeric(peak_quant$Standard$features_intensity[i, ..s]))                                    data.table::set(Ioncount_sample,i = as.integer(i),j = as.integer(1),value = as.numeric(peak_quant$Standard$Ioncount_feature_sample_matrix[i,..s]))
+                                    data.table::set(feat_w_bkgrnd_inty_samp, i=as.integer(i), j=as.integer(1), value=as.numeric(peak_quant$Standard$feature_with_background_intensity[i, ..s]))
+                                    data.table::set(Ioncount_with_background_sample, i=as.integer(i), j=as.integer(1), value=as.numeric(peak_quant$Standard$Ioncount_feat_w_background_intensity[i, ..s]))
+                                    data.table::set(peak_selected_sample, i=as.integer(i), j=as.integer(1), value=as.numeric(length(peak_quant)))
+                                }
+                            }
+
+                            # None of the peaks is within the accepted range
+                            # thus use standard window
+                            else{
+                                data.table::set(features_intensity_sample, i=as.integer(i), j=as.integer(1), value=as.numeric(peak_quant$Standard$features_intensity[i, ..s]))
+                                data.table::set(Ioncount_sample, i=as.integer(i), j=as.integer(1), value=as.numeric(peak_quant$Standard$Ioncount_feature_sample_matrix[i, ..s]))
+                                data.table::set(feat_w_bkgrnd_inty_samp, i=as.integer(i), j=as.integer(1), value=as.numeric(peak_quant$Standard$feature_with_background_intensity[i, ..s]))
+                                data.table::set(Ioncount_with_background_sample, i=as.integer(i), j=as.integer(1), value=as.numeric(peak_quant$Standard$Ioncount_feat_w_background_intensity[i, ..s]))
+                                data.table::set(peak_selected_sample, i=as.integer(i), j=as.integer(1), value=as.numeric(length(peak_quant)))
+                            }
+                        }
+
+                        # No peak was valid
+                        else{
+                            data.table::set(features_intensity_sample, i=as.integer(i), j=as.integer(1), value=as.numeric(peak_quant$Standard$features_intensity[i, ..s]))
+                            data.table::set(Ioncount_sample, i=as.integer(i), j=as.integer(1), value=as.numeric(peak_quant$Standard$Ioncount_feature_sample_matrix[i, ..s]))
+                            data.table::set(feat_w_bkgrnd_inty_samp, i=as.integer(i), j=as.integer(1), value=as.numeric(peak_quant$Standard$feature_with_background_intensity[i, ..s]))
+                            data.table::set(Ioncount_with_background_sample, i=as.integer(i), j=as.integer(1), value=as.numeric(peak_quant$Standard$Ioncount_feat_w_background_intensity[i, ..s]))
+                            data.table::set(peak_selected_sample, i=as.integer(i), j=as.integer(1), value=as.numeric(length(peak_quant)))
+                        }
+                    }
+
+                    # In no other sample the correct peak was known thus use the
+                    # standard window
+                    else{
+                        data.table::set(features_intensity_sample, i=as.integer(i), j=as.integer(1), value=as.numeric(peak_quant$Standard$features_intensity[i, ..s]))
+                        data.table::set(Ioncount_sample, i=as.integer(i), j=as.integer(1), value=as.numeric(peak_quant$Standard$Ioncount_feature_sample_matrix[i, ..s]))
+                        data.table::set(feat_w_bkgrnd_inty_samp, i=as.integer(i), j=as.integer(1), value=as.numeric(peak_quant$Standard$feature_with_background_intensity[i, ..s]))
+                        data.table::set(Ioncount_with_background_sample, i=as.integer(i), j=as.integer(1), value=as.numeric(peak_quant$Standard$Ioncount_feat_w_background_intensity[i, ..s]))
+                        data.table::set(peak_selected_sample, i=as.integer(i), j=as.integer(1), value=as.numeric(length(peak_quant)))
+                    }
+                }
+            }
+        }
+
+        updatecounter <- updatecounter + 1
+        if(updatecounter >= 10 & progress == TRUE){
+            time_elapsed <- difftime(Sys.time(), start_time,units="secs")
+            time_require <- (time_elapsed / (i / max)) * (1 - (i / max))
+            td <- lubridate::seconds_to_period(time_require)
+            time_require <- sprintf('%02d:%02d:%02d', td@hour,
+                                    lubridate::minute(td),
+                                    round(lubridate::second(td), digits=0))
+            updatecounter <- 0
+            label <- base::paste(round(i / max * 100, 0), " % done (", i, "/",
+                                 max, ", Time require: ", time_require, ")",
+                                 sep="")
+            tcltk::setTkProgressBar(pb, i, label=label)
+        }
     }
 
-  }
-  if(progress == T)
-  {
-    close(pb)
-  }
+    if(progress == TRUE){
+        close(pb)
+    }
 
-  return(list(features_intensity_sample=features_intensity_sample,
-              Ioncount_sample=Ioncount_sample,
-              feature_with_background_intensity_sample=feature_with_background_intensity_sample,
-              Ioncount_with_background_sample=Ioncount_with_background_sample,
-              peak_selected_sample=peak_selected_sample))
+    return(list(features_intensity_sample=features_intensity_sample,
+                Ioncount_sample=Ioncount_sample,
+                feat_w_bkgrnd_inty_samp=feat_w_bkgrnd_inty_samp,
+                Ioncount_with_background_sample=Ioncount_with_background_sample,
+                peak_selected_sample=peak_selected_sample))
 }
 
 #' Peak selection FDR algorithm for internal use
@@ -8296,7 +8385,7 @@ Peak_selection_FDR <- function(num_features=500, features, samples, peaks,
                     mz_correction_factors=mz_correction_factors,
                     features_intensity_sample=temp_dummy_df,
                     Ioncount_sample=temp_dummy_df,
-                    feature_with_background_intensity_sample=usefeat,
+                    feat_w_bkgrnd_inty_samp=usefeat,
                     Ioncount_with_background_sample=temp_dummy_df,
                     peak_selected_sample=usepeak,
                     delta_mz=delta_mz,
@@ -8309,7 +8398,7 @@ Peak_selection_FDR <- function(num_features=500, features, samples, peaks,
                 c2 <- peak_selected[selection_feature, s]
                 pk_dec_sme_wo_pk_knwn <- c1 == c2
 
-                usefeat <- res_temp$feature_with_background_intensity_sample
+                usefeat <- res_temp$feat_w_bkgrnd_inty_samp
                 data.table::set(ft_w_bkgrd_inty_sel_FDR,
                                 as.integer(selection_feature),
                                 as.integer(s), usefeat)
@@ -8457,6 +8546,7 @@ Peak_selection_FDR <- function(num_features=500, features, samples, peaks,
             }
 
             updatecounter <- updatecounter + 1
+
             if(updatecounter >= 1){
                 time_elapsed <- difftime(Sys.time(), start_time, units="secs")
                 time_require <- (time_elapsed / (s / max)) * (1 - (s / max))
@@ -8477,6 +8567,7 @@ Peak_selection_FDR <- function(num_features=500, features, samples, peaks,
         # Plot results over all samples
         Total_FDR <- NULL
         Large_Intensity_delta_FDR <- NULL
+
         for(s in 1:length(samples)){
             res <- results_peak_selection_FDR_all[[s]]
 
