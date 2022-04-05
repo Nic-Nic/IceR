@@ -1,8 +1,9 @@
-.onAttach <- function(libname, pkgname) {
+.onAttach <- function(libname, pkgname){
     if(!("cleaver" %in% rownames(utils::installed.packages()))){
         packageStartupMessage(base::paste0("Please install `cleaver` by ",
                                            "`BiocManager::install('cleaver')`"))
     }
+
     if(!("PECA" %in% rownames(utils::installed.packages()))){
         packageStartupMessage(base::paste0("Please install `PECA` by ",
                                            "`BiocManager::install('PECA')`"))
