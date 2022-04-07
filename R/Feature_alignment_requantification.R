@@ -2,120 +2,132 @@ def_feat_tab_fname <- "Features_aligned_merged_IceR_analysis.txt"
 
 #' Function to determine at which value a density maximum is reached
 #' @param data Numeric vector
-#' @details Uses kernel density estimation function from R-package stats removing missing values
+#' @details Uses kernel density estimation function from R-package stats
+#' removing missing values
 #' @return Numeric indicating at which value a density maximum is reached
 #' @export
-maxDensity <- function(data)
-{
-  dens <- stats::density(data,na.rm=T)
-  return(dens$x[which(dens$y == max(dens$y))])
+maxDensity <- function(data){
+    dens <- stats::density(data, na.rm=TRUE)
+    return(dens$x[which(dens$y == max(dens$y))])
 }
 
-#' Convert thermo raw files to mzXML with centroided ms1 scans using the ProteoWizard tool msConvert
-#' @param path_to_raw Path to folder containing raw files which should be converted
-#' @details Requires installation of ProteoWizard (http://proteowizard.sourceforge.net/download.html). Pay attention to installation requirements.
-#' @return Resulting mzXML files are stored in a sub-directory within specified raw file folder
+#' Convert thermo raw files to mzXML with centroided ms1 scans using the
+#' ProteoWizard tool msConvert
+#' @param path_to_raw Path to folder containing raw files which should be
+#' converted
+#' @details Requires installation of ProteoWizard
+#' '(http://proteowizard.sourceforge.net/download.html). Pay attention to
+#' installation requirements.
+#' @return Resulting mzXML files are stored in a sub-directory within specified
+#' raw file folder
 #' @export
-run_msconvert_raw_mzXML <- function(path_to_raw=NULL)
-{
-  #suppressWarnings(suppressMessages(library(ff,quietly = T)))
-  #suppressWarnings(suppressMessages(library(rChoiceDialogs,quietly = T)))
-
-  if(is.null(path_to_raw))path_to_raw <- rChoiceDialogs::rchoose.dir(caption = "Select folder containing raw files")
-
-  raw_files <- list.files(path_to_raw)
-  raw_files <- raw_files[which(grepl("\\.raw",raw_files))]
-
-  print("The following raw files were found in the specified folder: ")
-  cat(raw_files, sep = '\n')
-
-  ###check which raw files still have to be converted
-  mzXMLs_available <- list.files(base::paste(path_to_raw,"/mzXML",sep=""))
-
-  files_to_be_converted <- raw_files[which(base::gsub("\\.raw","",raw_files) %not in% base::gsub("\\.mzXML","",mzXMLs_available))]
-
-  if(length(files_to_be_converted)>0)
-  {
-    ###get home directory
-    home_folder <- Sys.getenv("HOME")
-    home_folder <- base::gsub("Documents","AppData/Local/Apps/",home_folder)
-
-    ###find MSConvert folder
-    folders <- list.dirs(path = home_folder, full.names = TRUE, recursive = F)
-    folders <- folders[which(grepl("ProteoWizard",folders))]
-    folders <- folders[length(folders)]
-
-    if(file.exists(base::paste(folders,"\\msconvert.exe",sep="")))
-    {
-      path_to_msconvert <- base::paste(folders,"\\msconvert.exe",sep="")
-    }else
-    {
-      print("Could not find msconvert.exe. Can be usually found in C:/Users/user_name/AppData/Local/Apps/ProteoWizard Version")
-      pb <- tcltk::tkProgressBar("Warning!",min = 0,max = 3,initial = 0,label = "Could not find msConvert.exe.",width = 500)
-
-      counter <- 1
-      label <- c("On Windows typically located in C:/Users/user_name/AppData/Local/Apps/ProteoWizard Version",
-                 "Please specify location of msConvert.exe")
-      while(T)
-      {
-        Sys.sleep(3)
-        tcltk::setTkProgressBar(pb,value = counter,label = label[counter])
-        counter <- counter + 1
-        if(counter == 4)break
-      }
-      close(pb)
-      path_to_msconvert <- file.choose()
+run_msconvert_raw_mzXML <- function(path_to_raw=NULL){
+    if(is.null(path_to_raw)){
+        path_to_raw <- rChoiceDialogs::rchoose.dir(
+            caption="Select folder containing raw files"
+        )
     }
 
-    ###get user folder
-    win_user_folder <- path.expand('~')
+    raw_files <- list.files(path_to_raw)
+    raw_files <- raw_files[which(grepl("\\.raw", raw_files))]
 
-    ###create temporary folder
-    dir.create(base::paste(win_user_folder,"\\temp_msconvert",sep=""),showWarnings = F)
-    dir.create(base::paste(win_user_folder,"\\temp_msconvert\\mzXML",sep=""),showWarnings = F)
+    print("The following raw files were found in the specified folder: ")
+    cat(raw_files, sep='\n')
 
-    ###create temporary config.txt and files.txt
-    temp_path <- base::paste(win_user_folder,"\\temp_msconvert",sep="")
-    setwd(temp_path)
-    ####config
-    fileConn<-file("config.txt")
-    writeLines(c("mzXML=true",
-                 "64=true",
-                 "noindex=false",
-                 "zlib=true",
-                 "filter=\"peakPicking vendor msLevel=1\"",
-                 "filter=\"msLevel 1\""), fileConn)
-    close(fileConn)
-    ####files
-    fileConn<-file("files.txt")
-    writeLines(base::paste(path_to_raw,"\\",files_to_be_converted,sep=""), fileConn)
-    close(fileConn)
+    # Check which raw files still have to be converted
+    mzXMLs_available <- list.files(base::paste(path_to_raw, "/mzXML", sep=""))
 
-    ###prepare arguments for msconvert
-    arg <- base::paste("-f ",temp_path,"\\files.txt",
-                 " -o ",temp_path,"\\mzXML",
-                 " -c ",temp_path,"\\config.txt",sep="")
+    c1 <- which(base::gsub("\\.raw", "", raw_files)
+    c2 <- base::gsub("\\.mzXML", "", mzXMLs_available))
+    files_to_be_converted <- raw_files[c1 %not in% c2]
 
-    ###run msconvert
-    system2(path_to_msconvert, args = arg)
+    if(length(files_to_be_converted) > 0){
+        # Get home directory
+        home_folder <- Sys.getenv("HOME")
+        home_folder <- base::gsub("Documents", "AppData/Local/Apps/",
+                                  home_folder)
 
-    ###move mzXMLs to original raw folder
-    from <- temp_path
-    to   <- path_to_raw
-    path1 <- base::paste0(from,"\\mzXML")
-    path2 <- base::paste0(to,"\\mzXML")
+        # Find MSConvert folder
+        folders <- list.dirs(path=home_folder, full.names=TRUE, recursive=FALSE)
+        folders <- folders[which(grepl("ProteoWizard", folders))]
+        folders <- folders[length(folders)]
 
-    dir.create(path2,showWarnings = F)
+        if(file.exists(base::paste(folders, "\\msconvert.exe", sep=""))){
+            path_to_msconvert <- base::paste(folders, "\\msconvert.exe", sep="")
+        }
 
-    for(f in base::gsub("\\.raw",".mzXML",files_to_be_converted))
-    {
-      ff::file.move(base::paste(path1,"\\",f,sep=""),path2)
+        else{
+            pth <- "C:/Users/user_name/AppData/Local/Apps/ProteoWizard Version"
+            print(paste0("Could not find msconvert.exe. Can be usually found ",
+                         "in ", pth))
+            pb <- tcltk::tkProgressBar("Warning!", min=0, max=3, initial=0,
+                                       label="Could not find msConvert.exe.",
+                                       width=500)
+
+            counter <- 1
+
+            label <- c(paste0("On Windows typically located in ", pth),
+                       "Please specify location of msConvert.exe")
+
+            while(TRUE){
+                Sys.sleep(3)
+                tcltk::setTkProgressBar(pb, value=counter, label=label[counter])
+                counter <- counter + 1
+
+                if(counter == 4){
+                    break
+                }
+            }
+
+            close(pb)
+            path_to_msconvert <- file.choose()
+        }
+
+        # Get user folder
+        win_user_folder <- path.expand('~')
+
+        # Create temporary folder
+        dir.create(base::paste(win_user_folder, "\\temp_msconvert", sep=""),
+                   showWarnings=FALSE)
+        dir.create(base::paste(win_user_folder, "\\temp_msconvert\\mzXML",
+                               sep=""), showWarnings=FALSE)
+
+        # Create temporary config.txt and files.txt
+        temp_path <- base::paste(win_user_folder, "\\temp_msconvert", sep="")
+        setwd(temp_path)
+        # Config
+        fileConn <- file("config.txt")
+        writeLines(c("mzXML=true", "64=true", "noindex=false", "zlib=true",
+                     "filter=\"peakPicking vendor msLevel=1\"",
+                     "filter=\"msLevel 1\""), fileConn)
+        close(fileConn)
+        # Files
+        fileConn <- file("files.txt")
+        writeLines(base::paste(path_to_raw, "\\", files_to_be_converted,
+                               sep=""), fileConn)
+        close(fileConn)
+
+        # Prepare arguments for msconvert
+        arg <- base::paste("-f ", temp_path, "\\files.txt", " -o ", temp_path,
+                           "\\mzXML", " -c ", temp_path, "\\config.txt", sep="")
+        # Run msconvert
+        system2(path_to_msconvert, args=arg)
+
+        # Move mzXMLs to original raw folder
+        from <- temp_path
+        to <- path_to_raw
+        path1 <- base::paste0(from, "\\mzXML")
+        path2 <- base::paste0(to, "\\mzXML")
+
+        dir.create(path2, showWarnings=FALSE)
+
+        for(f in base::gsub("\\.raw", ".mzXML", files_to_be_converted)){
+            ff::file.move(base::paste(path1, "\\", f, sep=""), path2)
+        }
+
+        # Remove temp msconvert folder
+        r <- file.remove(c("files.txt", "config.txt"))
     }
-
-    ###remove temp msconvert folder
-    r <- file.remove(c("files.txt","config.txt"))
-  }
-
 }
 
 #' Prepare mzXML files for IceR workflow
@@ -6851,7 +6863,7 @@ save(temp_results, file="Quantification_raw_results_with_scores_filtered.RData")
 
 # Perform protein level quantification
 
-correct_intensities <- function(features, feature_sample_matrix_requantified,
+correct_intensities <- function(features, feat_sample_mat_requant,
                                 pval_quant, MaxQ_peptides_quant, main="",
                                 corr_factor=NA){
     # No correction factor specified so correction will be determined and then
@@ -6861,7 +6873,7 @@ correct_intensities <- function(features, feature_sample_matrix_requantified,
         # determination of general trends in difference between MaxQ and Requant
         # quantification
         select <- which(!grepl("_i|_d", features$Feature_name))
-        feature_quant <- feature_sample_matrix_requantified[select, ]
+        feature_quant <- feat_sample_mat_requant[select, ]
         feature_quant_pval <- pval_quant[select, ]
         loc <- is.na(feature_quant_pval) | feature_quant_pval > 0.1
         feature_quant[loc] <- NA
@@ -6895,7 +6907,7 @@ correct_intensities <- function(features, feature_sample_matrix_requantified,
         comb <- dplyr::full_join(MaxQ_peptides_quant,
                                  Requant_peptides_quant_seq, by="Sequence")
 
-        ncolumns <- ncol(feature_sample_matrix_requantified)
+        ncolumns <- ncol(feat_sample_mat_requant)
 
         dat <- base::as.data.frame(matrix(ncol=2, nrow=nrow(comb) * ncolumns))
         dat[, 1] <- as.numeric(dat[, 1])
@@ -6942,7 +6954,7 @@ correct_intensities <- function(features, feature_sample_matrix_requantified,
         grDevices::dev.off()
 
         # Correction
-        vals <- base::log2(10^feature_sample_matrix_requantified)
+        vals <- base::log2(10^feat_sample_mat_requant)
         features_sample_matrix_corrected <- base::as.data.frame(vals)
 
         # Correct slope
@@ -6960,7 +6972,7 @@ correct_intensities <- function(features, feature_sample_matrix_requantified,
     # Correction factor is supplied so correct data accordingly
     else{
         # Correction
-        vals <- base::log2(10^feature_sample_matrix_requantified)
+        vals <- base::log2(10^feat_sample_mat_requant)
         features_sample_matrix_corrected <- base::as.data.frame(vals)
 
         for(c in 1:ncol(features_sample_matrix_corrected)){
@@ -6973,1345 +6985,2070 @@ correct_intensities <- function(features, feature_sample_matrix_requantified,
     }
 }
 
-Top3_Protein_Quant <- function(features,feature_sample_matrix_requantified,Alignment_scores=NULL,Quant_pvals=NULL,S2B=NULL,use_overlapping=T,min_peps=2,quant_pvalue_cutoff=0.1,use_isotope_pmps=F)
-{
-pb <- tcltk::tkProgressBar(title = "Prepare Top3 quantification",label=base::paste( round(0/1*100, 0),"% done"), min = 0,max = 1, width = 300)
-close(pb)
-
-
-feature_sample_matrix_requantified <- base::as.data.frame(feature_sample_matrix_requantified)
-if(!is.null(Quant_pvals))Quant_pvals <- base::as.data.frame(Quant_pvals)
-if(!is.null(Alignment_scores))Alignment_scores <- base::as.data.frame(Alignment_scores)
-if(!is.null(S2B))S2B <- base::as.data.frame(S2B)
-##top3 method
-###input matrix with samples in cols and rows correspond to unique peptides (log2 summed intensity over charge state and modification) of a respective protein
-Top3_quant <- function(pep_matrix,features_temp,Alignment_scores_temp=NULL,Quant_pvals_temp=NULL,S2B_temp=NULL)
-{
-sequence <- features_temp$Sequence
-
-if(length(sequence)>0)
-{
-pep_matrix <- stats::aggregate(2^pep_matrix, by=list(Sequence=sequence), FUN=sum,na.rm=T)
-pep_matrix <- pep_matrix[,-1]
-pep_matrix[pep_matrix==0] <- NA
-pep_matrix <- base::log2(pep_matrix)
-
-if(!is.null(Alignment_scores_temp))
-{
-score_matrix <- stats::aggregate(Alignment_scores_temp, by=list(Sequence=sequence), FUN=mean,na.rm=T)
-score_matrix <- score_matrix[,-1]
-score_matrix[score_matrix==0] <- NA
-}else
-{
-score_matrix <- matrix(nrow=nrow(pep_matrix),ncol=ncol(pep_matrix),NA)
-colnames(score_matrix) <- colnames(pep_matrix)
-}
-if(!is.null(Quant_pvals_temp))
-{
-pval_matrix <- stats::aggregate(Quant_pvals_temp, by=list(Sequence=sequence), FUN=mean,na.rm=T)
-pval_matrix <- pval_matrix[,-1]
-pval_matrix[pval_matrix==0] <- NA
-}else
-{
-pval_matrix <- matrix(nrow=nrow(pep_matrix),ncol=ncol(pep_matrix),NA)
-colnames(pval_matrix) <- colnames(pep_matrix)
-}
-if(!is.null(S2B_temp))
-{
-S2B_matrix <- stats::aggregate(S2B_temp, by=list(Sequence=sequence), FUN=mean,na.rm=T)
-S2B_matrix <- S2B_matrix[,-1]
-S2B_matrix[S2B_matrix==0] <- NA
-}else
-{
-S2B_matrix <- matrix(nrow=nrow(pep_matrix),ncol=ncol(pep_matrix),NA)
-colnames(S2B_matrix) <- colnames(pep_matrix)
-}
-
-top3_res <- NULL
-top3_score_res <- NULL
-top3_pval_res <- NULL
-top3_S2B_res <- NULL
-for(c in 1:ncol(pep_matrix))
-{
-top3 <- 2^pep_matrix[order(pep_matrix[,c],na.last = T,decreasing = T),c][1:3]
-sums <- sum(top3,na.rm=T)
-
-if(!is.null(Alignment_scores_temp))
-{
-top3_score <- score_matrix[order(pep_matrix[,c],na.last = T,decreasing = T),c][1:3]
-median_score <- stats::median(top3_score,na.rm=T)
-}else
-{
-median_score <- NA
-}
-
-if(!is.null(Quant_pvals_temp))
-{
-top3_pval <- pval_matrix[order(pep_matrix[,c],na.last = T,decreasing = T),c][1:3]
-median_pval <- stats::median(top3_pval,na.rm=T)
-}else
-{
-median_pval <- NA
-}
-
-if(!is.null(S2B_temp))
-{
-top3_S2B <- S2B_matrix[order(pep_matrix[,c],na.last = T,decreasing = T),c][1:3]
-median_S2B <- stats::median(top3_S2B,na.rm=T)
-}else
-{
-median_S2B <- NA
-}
-
-if(sums == 0)
-{
-sums <- NA
-}else
-{
-if(length(which(!is.na(top3)))>=min_peps) ### quantification only if at least 2 peptide quantifications are available
-{
-sums <- sums/length(which(!is.na(top3)))
-}else
-{
-sums <- NA
-median_score <- NA
-median_pval <- NA
-median_S2B <- NA
-}
-
-}
-top3_res <- append(top3_res,base::log2(sums))
-top3_score_res <- append(top3_score_res,median_score)
-top3_pval_res <- append(top3_pval_res,median_pval)
-top3_S2B_res <- append(top3_S2B_res,median_S2B)
-}
-}else
-{
-top3_res <- rep(NA,ncol(pep_matrix))
-top3_score_res <- rep(NA,ncol(score_matrix))
-top3_pval_res <- rep(NA,ncol(pval_matrix))
-top3_S2B_res <- rep(NA,ncol(pval_matrix))
-}
-
-names(top3_res) <- colnames(pep_matrix)
-names(top3_score_res) <- base::paste(colnames(score_matrix),"_median_score",sep="")
-names(top3_pval_res) <- base::paste(colnames(pval_matrix),"_median_pvals",sep="")
-names(top3_S2B_res) <- base::paste(colnames(pval_matrix),"_median_S2B",sep="")
-
-return(append(top3_res,append(top3_score_res,append(top3_pval_res,top3_S2B_res))))
-}
-
-if(use_isotope_pmps == F)
-{
-features_temp <- features[which(features$Protein != "" & !grepl(";",features$Sequence) & !grepl("_i|_pmp",features$Feature_name)),]
-feature_sample_matrix_requantified_temp <- feature_sample_matrix_requantified[which(features$Protein != "" & !grepl(";",features$Sequence) & !grepl("_i|_pmp",features$Feature_name)),]
-Quant_pvals_temp <- Quant_pvals[which(features$Protein != "" & !grepl(";",features$Sequence) & !grepl("_i|_pmp",features$Feature_name)),]
-Alignment_scores_temp <- Alignment_scores[which(features$Protein != "" & !grepl(";",features$Sequence) & !grepl("_i|_pmp",features$Feature_name)),]
-S2B_temp <- S2B[which(features$Protein != "" & !grepl(";",features$Sequence) & !grepl("_i|_pmp",features$Feature_name)),]
-}else
-{
-features_temp <- features[which(features$Protein != "" & !grepl(";",features$Sequence)),]
-feature_sample_matrix_requantified_temp <- feature_sample_matrix_requantified[which(features$Protein != "" & !grepl(";",features$Sequence) ),]
-Quant_pvals_temp <- Quant_pvals[which(features$Protein != "" & !grepl(";",features$Sequence) ),]
-Alignment_scores_temp <- Alignment_scores[which(features$Protein != "" & !grepl(";",features$Sequence) ),]
-S2B_temp <- S2B[which(features$Protein != "" & !grepl(";",features$Sequence) ),]
-}
-
-if(!is.na(quant_pvalue_cutoff))
-{
-selection <- which(matrixStats::rowMins(as.matrix(Quant_pvals_temp),na.rm=T) < quant_pvalue_cutoff)
-
-features_temp <- features[selection,]
-feature_sample_matrix_requantified_temp <- feature_sample_matrix_requantified[selection,]
-Quant_pvals_temp <- Quant_pvals[selection,]
-Alignment_scores_temp <- Alignment_scores[selection,]
-S2B_temp <- S2B[selection,]
-}
-
-if(nrow(features_temp) > 0)
-{
-if(use_overlapping==T) ###use also features where a peptide is shared between 2 or more proteins
-{
-unique_proteins <- sort(unique(as.character(stringr::str_split(features_temp$Protein,"\\||;",simplify = T))))
-}else
-{
-unique_proteins <- sort(unique(features_temp$Protein[which(!grepl("\\||;",features_temp$Protein))]))
-}
-
-if(any(unique_proteins == ""))unique_proteins <- unique_proteins[-which(unique_proteins == "")]
-
-protein_TOP3 <- base::as.data.frame(matrix(ncol=1+(4*ncol(feature_sample_matrix_requantified)),nrow=length(unique_proteins),0))
-rownames(protein_TOP3) <- unique_proteins
-colnames(protein_TOP3) <- c("num_quant_features",colnames(feature_sample_matrix_requantified),base::paste("median_alignment_score_",colnames(feature_sample_matrix_requantified),sep=""),base::paste("median_quant_pvals_",colnames(feature_sample_matrix_requantified),sep=""),base::paste("median_S2B_",colnames(feature_sample_matrix_requantified),sep=""))
-
-max <- nrow(protein_TOP3)
-pb <- tcltk::tkProgressBar(title = "Perform Top3 quantification",label=base::paste( round(0/max*100, 0),"% done"), min = 0,max = max, width = 300)
-start_time <- Sys.time()
-updatecounter <- 0
-time_require <- 0
-for(i in 1:length(unique_proteins))
-{
-if(use_overlapping==T)
-{
-ind <- which(grepl(unique_proteins[i],features_temp$Protein))
-}else
-{
-ind <- which(features_temp$Protein == unique_proteins[i])
-}
-if(length(ind)>0)
-{
-data.table::set(protein_TOP3,as.integer(i),as.integer(1:ncol(protein_TOP3)),value=as.list(c(length(ind),as.numeric(Top3_quant(pep_matrix = feature_sample_matrix_requantified_temp[ind,],features_temp = features_temp[ind,],Alignment_scores_temp = Alignment_scores[ind,],Quant_pvals_temp=Quant_pvals[ind,],S2B_temp=S2B_temp[ind,])))))
-}else
-{
-data.table::set(protein_TOP3,as.integer(i),as.integer(1),value=0)
-}
-
-updatecounter <- updatecounter + 1
-if(updatecounter >= 10)
-{
-time_elapsed <- difftime(Sys.time(),start_time,units="secs")
-time_require <- (time_elapsed/(i/max))*(1-(i/max))
-td <- lubridate::seconds_to_period(time_require)
-time_require <- sprintf('%02d:%02d:%02d', td@hour, lubridate::minute(td), round(lubridate::second(td),digits=0))
-
-updatecounter <- 0
-tcltk::setTkProgressBar(pb, i, label=base::paste( round(i/max*100, 0)," % done (",i,"/",max,", Time require: ",time_require,")",sep = ""))
-}
-}
-close(pb)
-}else
-{
-protein_TOP3 <- base::as.data.frame(matrix(ncol=1+(4*ncol(feature_sample_matrix_requantified)),nrow=0,0))
-colnames(protein_TOP3) <- c("num_quant_features",colnames(feature_sample_matrix_requantified),base::paste("median_alignment_score_",colnames(feature_sample_matrix_requantified),sep=""),base::paste("median_quant_pvals_",colnames(feature_sample_matrix_requantified),sep=""),base::paste("median_S2B_",colnames(feature_sample_matrix_requantified),sep=""))
-}
-
-return(protein_TOP3)
-}
-
-Total_Protein_Quant <- function(features,feature_sample_matrix_requantified,Alignment_scores=NULL,Quant_pvals=NULL,S2B=NULL,use_overlapping=T,min_peps=2,quant_pvalue_cutoff=0.1,use_isotope_pmps=F)
-{
-pb <- tcltk::tkProgressBar(title = "Prepare Total quantification",label=base::paste( round(0/1*100, 0),"% done"), min = 0,max = 1, width = 300)
-close(pb)
-
-feature_sample_matrix_requantified <- base::as.data.frame(feature_sample_matrix_requantified)
-if(!is.null(Quant_pvals))Quant_pvals <- base::as.data.frame(Quant_pvals)
-if(!is.null(Alignment_scores))Alignment_scores <- base::as.data.frame(Alignment_scores)
-if(!is.null(S2B))S2B <- base::as.data.frame(S2B)
-##total method
-###input matrix with samples in cols and rows correspond to unique peptides (log2 summed intensity over charge state and modification) of a respective protein
-Total_quant <- function(pep_matrix,features_temp,Alignment_scores_temp=NULL,Quant_pvals_temp=NULL,S2B_temp=NULL,Quant_cutoff=4)
-{
-sequence <- features_temp$Sequence
-
-if(length(sequence)>0)
-{
-pep_matrix <- stats::aggregate(2^pep_matrix, by=list(Sequence=sequence), FUN=sum,na.rm=T)
-pep_matrix <- pep_matrix[,-1]
-pep_matrix[pep_matrix==0] <- NA
-pep_matrix <- base::log2(pep_matrix)
-
-if(!is.null(Alignment_scores_temp))
-{
-score_matrix <- stats::aggregate(Alignment_scores_temp, by=list(Sequence=sequence), FUN=mean,na.rm=T)
-score_matrix <- score_matrix[,-1]
-score_matrix[score_matrix==0] <- NA
-}else
-{
-score_matrix <- matrix(nrow=nrow(pep_matrix),ncol=ncol(pep_matrix),NA)
-colnames(score_matrix) <- colnames(pep_matrix)
-}
-if(!is.null(Quant_pvals_temp))
-{
-pval_matrix <- stats::aggregate(Quant_pvals_temp, by=list(Sequence=sequence), FUN=mean,na.rm=T)
-pval_matrix <- pval_matrix[,-1]
-pval_matrix[pval_matrix==0] <- NA
-}else
-{
-pval_matrix <- matrix(nrow=nrow(pep_matrix),ncol=ncol(pep_matrix),NA)
-colnames(pval_matrix) <- colnames(pep_matrix)
-}
-if(!is.null(S2B_temp))
-{
-S2B_matrix <- stats::aggregate(S2B_temp, by=list(Sequence=sequence), FUN=mean,na.rm=T)
-S2B_matrix <- S2B_matrix[,-1]
-S2B_matrix[S2B_matrix==0] <- NA
-}else
-{
-S2B_matrix <- matrix(nrow=nrow(pep_matrix),ncol=ncol(pep_matrix),NA)
-colnames(S2B_matrix) <- colnames(pep_matrix)
-}
-
-total_res <- NULL
-total_score_res <- NULL
-total_pval_res <- NULL
-total_S2B_res <- NULL
-for(c in 1:ncol(pep_matrix))
-{
-total <- 2^pep_matrix[order(pep_matrix[,c],na.last = T,decreasing = T),c]
-sums <- sum(total,na.rm=T)
-
-if(!is.null(Alignment_scores_temp))
-{
-total_score <- score_matrix[order(pep_matrix[,c],na.last = T,decreasing = T),c]
-median_score <- stats::weighted.mean(total_score,total,na.rm=T)#stats::median(total_score,na.rm=T)
-}else
-{
-median_score <- NA
-}
-
-if(!is.null(Quant_pvals_temp))
-{
-total_pval <- pval_matrix[order(pep_matrix[,c],na.last = T,decreasing = T),c]
-median_pval <- stats::weighted.mean(total_pval,total,na.rm=T)#stats::median(total_pval,na.rm=T)
-}else
-{
-median_pval <- NA
-}
-
-if(!is.null(S2B_temp))
-{
-total_S2B <- S2B_matrix[order(pep_matrix[,c],na.last = T,decreasing = T),c]
-median_S2B <- stats::weighted.mean(total_S2B,total,na.rm=T)#stats::median(total_S2B,na.rm=T)
-}else
-{
-median_S2B <- NA
-}
-
-if(sums == 0)
-{
-sums <- NA
-}else
-{
-if(length(which(!is.na(total)))>=min_peps) ### quantification only if at least n peptide quantifications are available
-{
-sums <- sums/length(which(!is.na(total)))
-}else
-{
-sums <- NA
-median_score <- NA
-median_pval <- NA
-median_S2B <- NA
-}
-
-}
-
-total_res <- append(total_res,base::log2(sums))
-total_score_res <- append(total_score_res,median_score)
-total_pval_res <- append(total_pval_res,median_pval)
-total_S2B_res <- append(total_S2B_res,median_S2B)
-}
-}else
-{
-total_res <- rep(NA,ncol(pep_matrix))
-total_score_res <- rep(NA,ncol(score_matrix))
-total_pval_res <- rep(NA,ncol(pval_matrix))
-total_S2B_res <- rep(NA,ncol(pval_matrix))
-}
-
-names(total_res) <- colnames(pep_matrix)
-names(total_score_res) <- base::paste(colnames(score_matrix),"_median_score",sep="")
-names(total_pval_res) <- base::paste(colnames(pval_matrix),"_median_pvals",sep="")
-names(total_S2B_res) <- base::paste(colnames(pval_matrix),"_median_S2B",sep="")
-
-return(append(total_res,append(total_score_res,append(total_pval_res,total_S2B_res))))
-}
-
-if(use_isotope_pmps == F)
-{
-features_temp <- features[which(features$Protein != "" & !grepl(";",features$Sequence) & !grepl("_i|_pmp",features$Feature_name)),]
-feature_sample_matrix_requantified_temp <- feature_sample_matrix_requantified[which(features$Protein != "" & !grepl(";",features$Sequence) & !grepl("_i|_pmp",features$Feature_name)),]
-Quant_pvals_temp <- Quant_pvals[which(features$Protein != "" & !grepl(";",features$Sequence) & !grepl("_i|_pmp",features$Feature_name)),]
-Alignment_scores_temp <- Alignment_scores[which(features$Protein != "" & !grepl(";",features$Sequence) & !grepl("_i|_pmp",features$Feature_name)),]
-S2B_temp <- S2B[which(features$Protein != "" & !grepl(";",features$Sequence) & !grepl("_i|_pmp",features$Feature_name)),]
-}else
-{
-features_temp <- features[which(features$Protein != "" & !grepl(";",features$Sequence)),]
-feature_sample_matrix_requantified_temp <- feature_sample_matrix_requantified[which(features$Protein != "" & !grepl(";",features$Sequence) ),]
-Quant_pvals_temp <- Quant_pvals[which(features$Protein != "" & !grepl(";",features$Sequence) ),]
-Alignment_scores_temp <- Alignment_scores[which(features$Protein != "" & !grepl(";",features$Sequence) ),]
-S2B_temp <- S2B[which(features$Protein != "" & !grepl(";",features$Sequence) ),]
-}
-
-if(!is.na(quant_pvalue_cutoff))
-{
-selection <- which(matrixStats::rowMins(as.matrix(Quant_pvals_temp),na.rm=T) < quant_pvalue_cutoff)
-
-features_temp <- features[selection,]
-feature_sample_matrix_requantified_temp <- feature_sample_matrix_requantified[selection,]
-Quant_pvals_temp <- Quant_pvals[selection,]
-Alignment_scores_temp <- Alignment_scores[selection,]
-S2B_temp <- S2B[selection,]
-}
-
-if(nrow(features_temp) > 0)
-{
-if(use_overlapping==T) ###use also features where a peptide is shared between 2 or more proteins
-{
-unique_proteins <- sort(unique(as.character(stringr::str_split(features_temp$Protein,"\\||;",simplify = T))))
-}else
-{
-unique_proteins <- sort(unique(features_temp$Protein[which(!grepl("\\||;",features_temp$Protein))]))
-}
-
-if(any(unique_proteins == ""))unique_proteins <- unique_proteins[-which(unique_proteins == "")]
-
-protein_total <- base::as.data.frame(matrix(ncol=1+(4*ncol(feature_sample_matrix_requantified)),nrow=length(unique_proteins),0))
-rownames(protein_total) <- unique_proteins
-colnames(protein_total) <- c("num_quant_features",colnames(feature_sample_matrix_requantified),base::paste("median_alignment_score_",colnames(feature_sample_matrix_requantified),sep=""),base::paste("median_quant_pvals_",colnames(feature_sample_matrix_requantified),sep=""),base::paste("median_S2B_",colnames(feature_sample_matrix_requantified),sep=""))
-
-max <- nrow(protein_total)
-pb <- tcltk::tkProgressBar(title = "Perform total quantification",label=base::paste( round(0/max*100, 0),"% done"), min = 0,max = max, width = 300)
-start_time <- Sys.time()
-updatecounter <- 0
-time_require <- 0
-for(i in 1:length(unique_proteins))
-{
-if(use_overlapping==T)
-{
-ind <- which(grepl(unique_proteins[i],features_temp$Protein))
-}else
-{
-ind <- which(features_temp$Protein == unique_proteins[i])
-}
-if(length(ind)>0)
-{
-data.table::set(protein_total,as.integer(i),as.integer(1:ncol(protein_total)),value=as.list(c(length(ind),as.numeric(Total_quant(pep_matrix = feature_sample_matrix_requantified_temp[ind,],features_temp = features_temp[ind,],Alignment_scores_temp = Alignment_scores[ind,],Quant_pvals_temp=Quant_pvals[ind,],S2B_temp=S2B_temp[ind,])))))
-}else
-{
-data.table::set(protein_total,as.integer(i),as.integer(1),value=0)
-}
-
-updatecounter <- updatecounter + 1
-if(updatecounter >= 10)
-{
-time_elapsed <- difftime(Sys.time(),start_time,units="secs")
-time_require <- (time_elapsed/(i/max))*(1-(i/max))
-td <- lubridate::seconds_to_period(time_require)
-time_require <- sprintf('%02d:%02d:%02d', td@hour, lubridate::minute(td), round(lubridate::second(td),digits=0))
-
-updatecounter <- 0
-tcltk::setTkProgressBar(pb, i, label=base::paste( round(i/max*100, 0)," % done (",i,"/",max,", Time require: ",time_require,")",sep = ""))
-}
-}
-close(pb)
-}else
-{
-protein_total <- base::as.data.frame(matrix(ncol=1+(4*ncol(feature_sample_matrix_requantified)),nrow=0,0))
-colnames(protein_total) <- c("num_quant_features",colnames(feature_sample_matrix_requantified),base::paste("median_alignment_score_",colnames(feature_sample_matrix_requantified),sep=""),base::paste("median_quant_pvals_",colnames(feature_sample_matrix_requantified),sep=""),base::paste("median_S2B_",colnames(feature_sample_matrix_requantified),sep=""))
-}
-
-return(protein_total)
-}
-
-crap <- gc(F)
-###perform protein level aggregation
-if(!is.null(path_to_MaxQ_output))
-{
-print(paste0(Sys.time()," Perform protein-level aggregation"))
-
-###load MaxQ peptide results
-MaxQ_peptides <- utils::read.table(base::paste(path_to_MaxQ_output,"/peptides.txt",sep=""),sep="\t",header=T)
-MaxQ_peptides <- MaxQ_peptides[-which(MaxQ_peptides$Potential.contaminant == "+" | MaxQ_peptides$Reverse == "+"),]
-MaxQ_peptides_quant <- MaxQ_peptides[,which(grepl("Intensity\\.",colnames(MaxQ_peptides)))]
-MaxQ_peptides_quant[MaxQ_peptides_quant==0] <- NA
-MaxQ_peptides_quant <- base::log2(MaxQ_peptides_quant)
-MaxQ_peptides_leading_razor <- base::data.frame(Sequence=MaxQ_peptides$Sequence,Leading_razor=MaxQ_peptides$Leading.razor.protein)
-MaxQ_peptides_leading_razor$Leading_razor <- as.character(MaxQ_peptides_leading_razor$Leading_razor)
-MaxQ_peptides <- base::data.frame(Sequence=MaxQ_peptides$Sequence,MaxQ_peptides_quant)
-
-MaxQ_protein_groups <- utils::read.table(base::paste(path_to_MaxQ_output,"/proteinGroups.txt",sep=""),sep="\t",header=T)
-
-###check if IDs were correctly parsed, if not, try to parse with SwissProt or Trembl
-if(!any(colnames(MaxQ_protein_groups) == "Gene.names") & any(colnames(MaxQ_protein_groups) == "Protein.IDs")) ##not correctly parsed but contains trembl or swissprot fasta headers
-{
-print(paste0(Sys.time()," Fasta file was not correctly parsed during search. Try to base::paste fasta headers ..."))
-if(any(grepl(">sp|>tr",MaxQ_protein_groups$Fasta.headers)))
-{
-print(paste0(Sys.time()," Detected Swiss-Prot and/or TrEMBL fasta headers."))
-##protein level
-###parsing was not performed correctly so we have to try to do this here expecting swissprot or trembl fasta headers
-MaxQ_protein_groups$Gene.names <- ""
-MaxQ_protein_groups$Organism <- ""
-MaxQ_protein_groups$Protein.IDs <- as.character(MaxQ_protein_groups$Protein.IDs)
-
-fasta_headers <- stringr::str_split(base::gsub(">","",MaxQ_protein_groups$Fasta.headers),"\\|",simplify = T)
-
-##extract gene name and species information
-GN <- vector("character",nrow(MaxQ_protein_groups))
-ID <- vector("character",nrow(MaxQ_protein_groups))
-GN_start <- unlist(lapply(base::paste(gregexpr("GN=",MaxQ_protein_groups$Fasta.headers),sep=","), `[[`, 1))
-GN_start <- base::gsub("c\\(|\\)","",GN_start)
-
-for(i in 1:nrow(MaxQ_protein_groups))
-{
-if(GN_start[i] != "-1")
-{
-indices <- as.numeric(unlist(stringr::str_split(GN_start[i],","))) + 3
-stop <- regexpr(" ",substring(MaxQ_protein_groups$Fasta.headers[i],indices,indices+10))
-GN_temp <- substring(MaxQ_protein_groups$Fasta.headers[i],indices,indices+stop-2)
-GN[i] <- base::paste(GN_temp,collapse = ";")
-}
-
-header <- fasta_headers[i,c(2,4,6)][which(fasta_headers[i,c(2,4,6)] != "")]
-if(length(header)>0)ID[i] <- base::paste(header,collapse=";")
-}
-CON_REV <- !grepl("^CON_|^REV_",MaxQ_protein_groups$Protein.IDs)
-MaxQ_protein_groups$Protein.IDs <- ifelse(CON_REV,ID, MaxQ_protein_groups$Protein.IDs)
-MaxQ_protein_groups$Gene.names <- ifelse(CON_REV,GN,"")
-MaxQ_protein_groups$Majority.protein.IDs <- MaxQ_protein_groups$Protein.IDs
-
-##peptide level
-if(any(grepl("\\|",MaxQ_peptides_leading_razor$Leading_razor)))
-{
-temp <- stringr::str_split(MaxQ_peptides_leading_razor$Leading_razor,"\\|",simplify = T)
-MaxQ_peptides_leading_razor$Leading_razor <- ifelse(temp[,2] != "",temp[,2],MaxQ_peptides_leading_razor$Leading_razor)
-}
-
-##requantification features
-temp <- stringr::str_split(features$Protein,"\\||;",simplify=T)
-ID <- vector("character",nrow(temp))
-for(i in 1:nrow(temp))
-{
-sel <- which(temp[i,] == "sp")+1
-if(length(sel)>0)
-{
-ID[i] <- base::paste(temp[i,sel],collapse=";")
-}else
-{
-sel <- which(temp[i,] != "")
-ID[i] <- base::paste(temp[i,sel],collapse=";")
-}
-}
-features$Protein <- ID
-}else
-{
-print(paste0(Sys.time()," No supported fasta headers were detected. Next steps might be not fully working."))
-}
-}
-
-#####Correct for overestimation of high intense features
-if(abundance_estimation_correction == F) ###no correction
-{
-feat_w_backgr_int <- base::log2(10^feat_w_backgr_int)
-feat_w_backgr_int_imputed <- base::log2(10^feat_w_backgr_int_imputed)
-
-}else ##correct abundance estimations based on MaxQ peptide abundance estimations
-{
-###determine abundance correction factors based on MaxQ peptide intensities and data without imputation
-cor_res <- correct_intensities(features,feature_sample_matrix_requantified = feat_w_backgr_int,pval_quant = pval_sig_w_bckgrnd_quant,MaxQ_peptides_quant = MaxQ_peptides,main="Signal_Background_intensity")
-
-feat_w_backgr_int <- cor_res[[1]]
-QC_data[["Abundance_correction"]] <- list(correction_data=cor_res[[2]],
-correction_fit=cor_res[[3]],
-correction_factor=cor_res[[4]])
-
-cor_res <- correct_intensities(features,feature_sample_matrix_requantified = feat_w_backgr_int_imputed,pval_quant = pval_sig_w_bckgrnd_quant,MaxQ_peptides_quant = MaxQ_peptides,main="Signal_Background_intensity_imputed",corr_factor = cor_res[[4]])
-
-feat_w_backgr_int_imputed <- cor_res[[1]]
-}
-
-###get leading razor ID per peptide sequence
-features$Protein <- as.character(features$Protein)
-features$all_matching_Proteins <- features$Protein
-features$Protein <- as.character(MaxQ_peptides_leading_razor$Leading_razor[match(features$Sequence,MaxQ_peptides_leading_razor$Sequence)])
-features$Protein[is.na(features$Protein)] <- features$all_matching_Proteins[is.na(features$Protein)]
-
-###perform peptide level LFQ
-if(calc_peptide_LFQ == T)
-{
-LFQ_peptide_quant_process <- function(features,features_quant,n_cores,label="Perform peptide-LFQ-quantification",num_ratio_samples=NA,TopN=5,seed=1)
-{
-set.seed(seed)
-##prepare for MaxLFQ algorithm
-
-
-calculate_LFQ <- function(peptide_quant_data,min_num_ratios=2,num_ratio_samples=NA)
-{
-
-#error function which is used to optimize ratios
-least_square_error <- function(par,ratio_mat)
-{
-sum <- 0
-vals <- NULL
-if(ncol(ratio_mat)>1)
-{
-for(c in 1:(ncol(ratio_mat)-1))
-{
-for(r in (c+1):nrow(ratio_mat))
-{
-val <- (base::log2(ratio_mat[r,c])-base::log2(par[r])+base::log2(par[c]))^2
-vals <- append(vals,val)
-if(!is.na(val)) sum <- sum + val
-}
-}
-}
-
-if(sum == 0){sum = NA}
-return(sum)
-}
-#unlog intensities
-peptide_quant_data <- 2^peptide_quant_data
-#calculate summed intensities per sample
-totalsum_per_sample <- colSums(peptide_quant_data,na.rm=T)
-#determine median ratio matrix between all samples
-ratio_mat <- base::as.data.frame(matrix(nrow=ncol(peptide_quant_data),ncol=ncol(peptide_quant_data)))
-if(ncol(ratio_mat)>1)
-{
-for(c in 1:(ncol(ratio_mat)-1))
-{
-for(r in (c+1):nrow(ratio_mat))
-{
-ratios <- peptide_quant_data[,r]/peptide_quant_data[,c]
-if(length(which(!is.na(ratios))) >= min_num_ratios){ratio_mat[r,c] <- stats::median(ratios,na.rm=T)}
-}
-}
-}
-if(is.na(num_ratio_samples)) ###calculate ratios over all samples
-{
-#define start parameter
-start_par <- c(rep(1,ncol(ratio_mat)))
-#now find optimum in ratios to best recover true observed ratios between samples
-res_ratio <- NULL
-try(res_ratio <- stats::optim(par=start_par, fn=least_square_error, ratio_mat=ratio_mat,lower = 1,upper=100,method = "L-BFGS-B"),silent = T)
-if(!is.null(res_ratio))
-{
-#normalize ratios to sample with highest intensity
-ratio_norm <- res_ratio$par / res_ratio$par[which(totalsum_per_sample == max(totalsum_per_sample))]
-#finally calculate log2 lfq protein intensities per sample
-lfq <- base::log2(ratio_norm*totalsum_per_sample[which(totalsum_per_sample == max(totalsum_per_sample))])
-#remove quant values for samples were no ratios were available
-if(any(colSums(!is.na(ratio_mat)) == 0 & rowSums(!is.na(ratio_mat)) == 0))
-{
-sel <- as.numeric(which(colSums(!is.na(ratio_mat)) == 0 & rowSums(!is.na(ratio_mat)) == 0))
-lfq[sel] <- NA
-}
-}else
-{
-lfq <- rep(NA,ncol(peptide_quant_data))
-}
-
-}else ###calculate ratios only for a subset of samples
-{
-lfq <- base::as.data.frame(matrix(nrow=ncol(peptide_quant_data),ncol=ncol(peptide_quant_data),0))
-for(s in 1:ncol(peptide_quant_data))
-{
-###randomly select up to 6 other samples from list of samples which also contain quantifications
-samples_with_quant <- as.numeric(which(colSums(peptide_quant_data,na.rm=T) > 0))
-samples_with_quant <- samples_with_quant[which(samples_with_quant != s)]
-if(length(samples_with_quant)>0)
-{
-samples_for_comparison_per_sample <- sample(samples_with_quant,ifelse(length(samples_with_quant)>num_ratio_samples,num_ratio_samples,length(samples_with_quant)))
-}else
-{
-samples_for_comparison_per_sample <- sample(c(1:ncol(peptide_quant_data))[-i],size = num_ratio_samples,replace = F)
-}
-
-ratio_mat_temp <- ratio_mat[c(s,sort(samples_for_comparison_per_sample)),c(s,sort(samples_for_comparison_per_sample))]
-if(length(which(!is.na(ratio_mat_temp))) < 3 & any(!is.na(peptide_quant_data[,s])))##to few of selected random samples show an observed intensity ratio but protein is quantified in current sample
-{
-###randomly select other samples
-
-}
-
-totalsum_per_sample_temp <- totalsum_per_sample[c(s,sort(samples_for_comparison_per_sample))]
-#define start parameter
-start_par <- c(rep(1,ncol(ratio_mat_temp)))
-#now find optimum in ratios to best recover true observed ratios between samples
-res_ratio <- NULL
-try(res_ratio <- stats::optim(par=start_par, fn=least_square_error, ratio_mat=ratio_mat_temp,lower = 1,upper=100,method = "L-BFGS-B"),silent = T)
-
-if(!is.null(res_ratio))
-{
-#normalize ratios to sample with highest intensity
-ratio_norm <- res_ratio$par / res_ratio$par[which(totalsum_per_sample_temp == max(totalsum_per_sample_temp,na.rm=T))]
-#finally calculate log2 lfq protein intensities per sample
-temp_lfq <- base::log2(ratio_norm*totalsum_per_sample_temp[which(totalsum_per_sample_temp == max(totalsum_per_sample_temp))])
-
-data.table::set(lfq,as.integer(s),as.integer(c(s,sort(samples_for_comparison_per_sample))),as.list(temp_lfq))
-}
-
-}
-lfq[lfq==0] <- NA
-lfq <- matrixStats::colMedians(as.matrix(lfq),na.rm=T)
-
-#remove quant values for samples were no ratios were available
-if(any(colSums(!is.na(ratio_mat)) == 0 & rowSums(!is.na(ratio_mat)) == 0))
-{
-sel <- as.numeric(which(colSums(!is.na(ratio_mat)) == 0 & rowSums(!is.na(ratio_mat)) == 0))
-lfq[sel] <- NA
-}
-
-
-}
-return(lfq)
-}
-
-###txtProgressBar from package pbarETA (Francesco Napolitano) - License: LGPL-3
-txtProgressBar <- function (min = 0, max = 1, initial = 0, char = "=", width = NA,
-title, label, style = 3, file = "")
-{
-formatTime <- function(seconds) {
-if (seconds == Inf || is.nan(seconds) || is.na(seconds))
-return("NA")
-seconds <- round(seconds)
-sXmin <- 60
-sXhr <- sXmin * 60
-sXday <- sXhr * 24
-sXweek <- sXday * 7
-sXmonth <- sXweek * 4.22
-sXyear <- sXmonth * 12
-years <- floor(seconds/sXyear)
-seconds <- seconds - years * sXyear
-months <- floor(seconds/sXmonth)
-seconds <- seconds - months * sXmonth
-weeks <- floor(seconds/sXweek)
-seconds <- seconds - weeks * sXweek
-days <- floor(seconds/sXday)
-seconds <- seconds - days * sXday
-hours <- floor(seconds/sXhr)
-seconds <- seconds - hours * sXhr
-minutes <- floor(seconds/sXmin)
-seconds <- seconds - minutes * sXmin
-ETA <- c(years, months, days, hours, minutes, seconds)
-startst <- which(ETA > 0)[1]
-if (is.na(startst))
-startst <- 6
-starts <- min(startst, 4)
-fmtstr <- rep("%02d", length(ETA))[startst:length(ETA)]
-fmtstr <- base::paste(fmtstr, collapse = ":")
-return(do.call(sprintf, as.list(c(as.list(fmtstr), ETA[startst:length(ETA)]))))
-}
-if (!identical(file, "") && !(inherits(file, "connection") &&
-isOpen(file)))
-stop("'file' must be \"\" or an open connection object")
-if (!style %in% 1L:3L)
-style <- 1
-.val <- initial
-.killed <- FALSE
-.nb <- 0L
-.pc <- -1L
-.time0 <- NA
-.timenow <- NA
-.firstUpdate <- T
-nw <- nchar(char, "w")
-if (is.na(width)) {
-width <- getOption("width")
-if (style == 3L)
-width <- width - 10L
-width <- trunc(width/nw)
-}
-if (max <= min)
-stop("must have 'max' > 'min'")
-up1 <- function(value) {
-if (!is.finite(value) || value < min || value > max)
-return()
-.val <<- value
-nb <- round(width * (value - min)/(max - min))
-if (.nb < nb) {
-cat(base::paste(rep.int(char, nb - .nb), collapse = ""),
-file = file)
-utils::flush.console()
-}
-else if (.nb > nb) {
-cat("\r", base::paste(rep.int(" ", .nb * nw), collapse = ""),
-"\r", base::paste(rep.int(char, nb), collapse = ""),
-sep = "", file = file)
-utils::flush.console()
-}
-.nb <<- nb
-}
-up2 <- function(value) {
-if (!is.finite(value) || value < min || value > max)
-return()
-.val <<- value
-nb <- round(width * (value - min)/(max - min))
-if (.nb <= nb) {
-cat("\r", base::paste(rep.int(char, nb), collapse = ""),
-sep = "", file = file)
-utils::flush.console()
-}
-else {
-cat("\r", base::paste(rep.int(" ", .nb * nw), collapse = ""),
-"\r", base::paste(rep.int(char, nb), collapse = ""),
-sep = "", file = file)
-utils::flush.console()
-}
-.nb <<- nb
-}
-up3 <- function(value, calledOnCreation = F) {
-timenow <- proc.time()[["elapsed"]]
-if (!calledOnCreation && .firstUpdate) {
-.time0 <<- timenow
-.timenow <<- timenow
-.firstUpdate <<- F
-}
-if (!is.finite(value) || value < min || value > max)
-return()
-.val <<- value
-nb <- round(width * (value - min)/(max - min))
-pc <- round(100 * (value - min)/(max - min))
-if (nb == .nb && pc == .pc && timenow - .timenow < 1)
-return()
-.timenow <<- timenow
-span <- timenow - .time0
-timeXiter <- span/(.val - min)
-ETA <- (max - .val) * timeXiter
-ETAstr <- formatTime(ETA)
-cat(base::paste(c("\r  |", rep.int(" ", nw * width + 6)),
-collapse = ""), file = file)
-cat(base::paste(c("\r  |", rep.int(char, nb), rep.int(" ",
-nw * (width - nb)), sprintf("| %3d%%", pc), ", ETA ",
-ETAstr), collapse = ""), file = file)
-utils::flush.console()
-.nb <<- nb
-.pc <<- pc
-}
-getVal <- function() .val
-kill <- function() if (!.killed) {
-cat("\n", file = file)
-utils::flush.console()
-.killed <<- TRUE
-}
-up <- switch(style, up1, up2, up3)
-up(initial, T)
-structure(list(getVal = getVal, up = up, kill = kill), class = "txtProgressBar")
-}
-
-sel <- which(!grepl(";|,",features$Sequence))
-unique_peptides <- sort(unique(base::paste(features$Sequence[sel],features$Modifications[sel],sep="_")))
-unique_seq <- base::substr(unique_peptides,1,regexpr("_",unique_peptides)-1)
-unique_mod <- base::substr(unique_peptides,regexpr("_",unique_peptides)+1,nchar(unique_peptides))
-
-LFQ_peptide_quant <- base::as.data.frame(matrix(ncol=ncol(features_quant),nrow=length(unique_peptides),0))
-colnames(LFQ_peptide_quant) <- colnames(features_quant)
-
-###Perform LFQ quantification
-cl <- snow::makeCluster(n_cores)#as.numeric(Sys.getenv('NUMBER_OF_PROCESSORS')))
-doSNOW::registerDoSNOW(cl)
-iterations <- nrow(LFQ_peptide_quant)
-progress <- function(n) utils::setTxtProgressBar(pb, n)
-opts <- list(progress = progress)
-start <- Sys.time()
-print(base::paste(label," (",Sys.time(),")",sep=""))
-pb <- txtProgressBar(max = iterations, style = 3)
-res_LFQ <- foreach::foreach(i=1:nrow(LFQ_peptide_quant),.options.snow = opts) %dopar%
-{
-sel <- which(features$Sequence == unique_seq[i] & features$Modifications == unique_mod[i])
-testdat = features_quant[sel,]
-if(nrow(testdat) > TopN) ###if more than 5 peptides are available select TopN peptides according to intensity over all samples (select highest abundant peptides as quantifications are more accurate)
-{
-total_abundance <- rowSums(testdat,na.rm=T)
-testdat <- testdat[order(total_abundance,decreasing = T)[1:TopN],]
-}
-if(nrow(testdat)>1)
-{
-res <- calculate_LFQ(peptide_quant_data = testdat,min_num_ratios = 1,num_ratio_samples=num_ratio_samples)
-}else
-{
-res <- as.numeric(testdat)
-names(res) <- base::paste("V",1:length(res),sep="")
-}
-return(res)
-}
-snow::stopCluster(cl)
-close(pb)
-
-#Combine results
-for(i in 1:length(res_LFQ))
-{
-if(length(res_LFQ[[i]])>0)
-{
-data.table::set(LFQ_peptide_quant,as.integer(i),as.integer(1:ncol(LFQ_peptide_quant)),as.list(as.numeric(res_LFQ[[i]])))
-}
-}
-
-#add information about number of quant features per protein
-count_quant_features <- plyr::count(sort(base::paste(features$Sequence[sel],features$Modifications[sel],sep="_")))
-
-LFQ_peptide_quant <- base::data.frame(Sequence=unique_seq,
-Modifications=unique_mod,
-Protein=features$Protein[match(unique_seq,features$Sequence)],
-num_quant_features=count_quant_features$freq[match(unique_peptides,count_quant_features$x)],
-LFQ_peptide_quant)
-
-colnames(LFQ_peptide_quant) <- base::gsub("^X","",colnames(LFQ_peptide_quant))
-
-end <- Sys.time()
-print(base::paste("Finished peptide LFQ-quantification (",Sys.time(),")",sep=""))
-print(end - start)
-#replace 0 by NA
-LFQ_peptide_quant[LFQ_peptide_quant==0] <- NA
-
-return(LFQ_peptide_quant)
-}
-
-if(ncol(feat_w_backgr_int) <= 10)num_ratio_samples <- NA
-if(ncol(feat_w_backgr_int) > 10)num_ratio_samples <- 6
-
-LFQ_peptide_quant_with_background <- LFQ_peptide_quant_process(features,feat_w_backgr_int,n_cores,label="Perform peptide LFQ-quantification for non-imputed data",num_ratio_samples = num_ratio_samples)
-LFQ_peptide_quant_with_background_imputed <- LFQ_peptide_quant_process(features,feat_w_backgr_int_imputed,n_cores,label="Perform peptide LFQ-quantification for imputed data",num_ratio_samples = num_ratio_samples)
-save(LFQ_peptide_quant_with_background,LFQ_peptide_quant_with_background_imputed,file = "Peptide_LFQ_temp.RData")
-}
-
-###perform protein level quantification
-if(calc_protein_LFQ == T)
-{
-##implementation of the MaxLFQ algorithm. num_ratio_samples indicates between how many samples the ratio matrices should be determined.
-#if num_ratio_samples is set to NA it will perform least-square analysis between all samples
-#if num_ratio_samples is set to a number < number of samples least square analysis is performed for randomly picked n (=num_ratio_samples) samples to reduced computation time
-LFQ_protein_quant_process <- function(features,features_quant,n_cores,label="Perform LFQ-quantification",num_ratio_samples=NA,TopN=5,seed=1)
-{
-set.seed(seed)
-##prepare for MaxLFQ algorithm
-
-
-calculate_LFQ <- function(peptide_quant_data,min_num_ratios=2,num_ratio_samples=NA)
-{
-
-#error function which is used to optimize ratios
-least_square_error <- function(par,ratio_mat)
-{
-sum <- 0
-vals <- NULL
-if(ncol(ratio_mat)>1)
-{
-for(c in 1:(ncol(ratio_mat)-1))
-{
-for(r in (c+1):nrow(ratio_mat))
-{
-val <- (base::log2(ratio_mat[r,c])-base::log2(par[r])+base::log2(par[c]))^2
-vals <- append(vals,val)
-if(!is.na(val)) sum <- sum + val
-}
-}
-}
-
-if(sum == 0){sum = NA}
-return(sum)
-}
-#unlog intensities
-peptide_quant_data <- 2^peptide_quant_data
-#calculate summed intensities per sample
-totalsum_per_sample <- colSums(peptide_quant_data,na.rm=T)
-#determine median ratio matrix between all samples
-ratio_mat <- base::as.data.frame(matrix(nrow=ncol(peptide_quant_data),ncol=ncol(peptide_quant_data)))
-if(ncol(ratio_mat)>1)
-{
-for(c in 1:(ncol(ratio_mat)-1))
-{
-for(r in (c+1):nrow(ratio_mat))
-{
-ratios <- peptide_quant_data[,r]/peptide_quant_data[,c]
-if(length(which(!is.na(ratios))) >= min_num_ratios){ratio_mat[r,c] <- stats::median(ratios,na.rm=T)}
-}
-}
-}
-if(is.na(num_ratio_samples)) ###calculate ratios over all samples
-{
-#define start parameter
-start_par <- c(rep(1,ncol(ratio_mat)))
-#now find optimum in ratios to best recover true observed ratios between samples
-res_ratio <- NULL
-try(res_ratio <- stats::optim(par=start_par, fn=least_square_error, ratio_mat=ratio_mat,lower = 1,upper=100,method = "L-BFGS-B"),silent = T)
-if(!is.null(res_ratio))
-{
-#normalize ratios to sample with highest intensity
-ratio_norm <- res_ratio$par / res_ratio$par[which(totalsum_per_sample == max(totalsum_per_sample))]
-#finally calculate log2 lfq protein intensities per sample
-lfq <- base::log2(ratio_norm*totalsum_per_sample[which(totalsum_per_sample == max(totalsum_per_sample))])
-#remove quant values for samples were no ratios were available
-if(any(colSums(!is.na(ratio_mat)) == 0 & rowSums(!is.na(ratio_mat)) == 0))
-{
-sel <- as.numeric(which(colSums(!is.na(ratio_mat)) == 0 & rowSums(!is.na(ratio_mat)) == 0))
-lfq[sel] <- NA
-}
-}else
-{
-lfq <- rep(NA,ncol(peptide_quant_data))
-}
-
-}else ###calculate ratios only for a subset of samples
-{
-lfq <- base::as.data.frame(matrix(nrow=ncol(peptide_quant_data),ncol=ncol(peptide_quant_data),0))
-for(s in 1:ncol(peptide_quant_data))
-{
-###randomly select up to 6 other samples from list of samples which also contain quantifications
-samples_with_quant <- as.numeric(which(colSums(peptide_quant_data,na.rm=T) > 0))
-samples_with_quant <- samples_with_quant[which(samples_with_quant != s)]
-if(length(samples_with_quant)>0)
-{
-samples_for_comparison_per_sample <- sample(samples_with_quant,ifelse(length(samples_with_quant)>num_ratio_samples,num_ratio_samples,length(samples_with_quant)))
-}else
-{
-samples_for_comparison_per_sample <- sample(c(1:ncol(peptide_quant_data))[-i],size = num_ratio_samples,replace = F)
-}
-
-ratio_mat_temp <- ratio_mat[c(s,sort(samples_for_comparison_per_sample)),c(s,sort(samples_for_comparison_per_sample))]
-if(length(which(!is.na(ratio_mat_temp))) < 3 & any(!is.na(peptide_quant_data[,s])))##to few of selected random samples show an observed intensity ratio but protein is quantified in current sample
-{
-###randomly select other samples
-
-}
-
-totalsum_per_sample_temp <- totalsum_per_sample[c(s,sort(samples_for_comparison_per_sample))]
-#define start parameter
-start_par <- c(rep(1,ncol(ratio_mat_temp)))
-#now find optimum in ratios to best recover true observed ratios between samples
-res_ratio <- NULL
-try(res_ratio <- stats::optim(par=start_par, fn=least_square_error, ratio_mat=ratio_mat_temp,lower = 1,upper=100,method = "L-BFGS-B"),silent = T)
-
-if(!is.null(res_ratio))
-{
-#normalize ratios to sample with highest intensity
-ratio_norm <- res_ratio$par / res_ratio$par[which(totalsum_per_sample_temp == max(totalsum_per_sample_temp,na.rm=T))]
-#finally calculate log2 lfq protein intensities per sample
-temp_lfq <- base::log2(ratio_norm*totalsum_per_sample_temp[which(totalsum_per_sample_temp == max(totalsum_per_sample_temp))])
-
-data.table::set(lfq,as.integer(s),as.integer(c(s,sort(samples_for_comparison_per_sample))),as.list(temp_lfq))
-}
-
-}
-lfq[lfq==0] <- NA
-lfq <- matrixStats::colMedians(as.matrix(lfq),na.rm=T)
-
-#remove quant values for samples were no ratios were available
-if(any(colSums(!is.na(ratio_mat)) == 0 & rowSums(!is.na(ratio_mat)) == 0))
-{
-sel <- as.numeric(which(colSums(!is.na(ratio_mat)) == 0 & rowSums(!is.na(ratio_mat)) == 0))
-lfq[sel] <- NA
-}
-
-
-}
-return(lfq)
-}
-
-###txtProgressBar from package pbarETA (Francesco Napolitano) - License: LGPL-3
-txtProgressBar <- function (min = 0, max = 1, initial = 0, char = "=", width = NA,
-title, label, style = 3, file = "")
-{
-formatTime <- function(seconds) {
-if (seconds == Inf || is.nan(seconds) || is.na(seconds))
-return("NA")
-seconds <- round(seconds)
-sXmin <- 60
-sXhr <- sXmin * 60
-sXday <- sXhr * 24
-sXweek <- sXday * 7
-sXmonth <- sXweek * 4.22
-sXyear <- sXmonth * 12
-years <- floor(seconds/sXyear)
-seconds <- seconds - years * sXyear
-months <- floor(seconds/sXmonth)
-seconds <- seconds - months * sXmonth
-weeks <- floor(seconds/sXweek)
-seconds <- seconds - weeks * sXweek
-days <- floor(seconds/sXday)
-seconds <- seconds - days * sXday
-hours <- floor(seconds/sXhr)
-seconds <- seconds - hours * sXhr
-minutes <- floor(seconds/sXmin)
-seconds <- seconds - minutes * sXmin
-ETA <- c(years, months, days, hours, minutes, seconds)
-startst <- which(ETA > 0)[1]
-if (is.na(startst))
-startst <- 6
-starts <- min(startst, 4)
-fmtstr <- rep("%02d", length(ETA))[startst:length(ETA)]
-fmtstr <- base::paste(fmtstr, collapse = ":")
-return(do.call(sprintf, as.list(c(as.list(fmtstr), ETA[startst:length(ETA)]))))
-}
-if (!identical(file, "") && !(inherits(file, "connection") &&
-isOpen(file)))
-stop("'file' must be \"\" or an open connection object")
-if (!style %in% 1L:3L)
-style <- 1
-.val <- initial
-.killed <- FALSE
-.nb <- 0L
-.pc <- -1L
-.time0 <- NA
-.timenow <- NA
-.firstUpdate <- T
-nw <- nchar(char, "w")
-if (is.na(width)) {
-width <- getOption("width")
-if (style == 3L)
-width <- width - 10L
-width <- trunc(width/nw)
-}
-if (max <= min)
-stop("must have 'max' > 'min'")
-up1 <- function(value) {
-if (!is.finite(value) || value < min || value > max)
-return()
-.val <<- value
-nb <- round(width * (value - min)/(max - min))
-if (.nb < nb) {
-cat(base::paste(rep.int(char, nb - .nb), collapse = ""),
-file = file)
-utils::flush.console()
-}
-else if (.nb > nb) {
-cat("\r", base::paste(rep.int(" ", .nb * nw), collapse = ""),
-"\r", base::paste(rep.int(char, nb), collapse = ""),
-sep = "", file = file)
-utils::flush.console()
-}
-.nb <<- nb
-}
-up2 <- function(value) {
-if (!is.finite(value) || value < min || value > max)
-return()
-.val <<- value
-nb <- round(width * (value - min)/(max - min))
-if (.nb <= nb) {
-cat("\r", base::paste(rep.int(char, nb), collapse = ""),
-sep = "", file = file)
-utils::flush.console()
-}
-else {
-cat("\r", base::paste(rep.int(" ", .nb * nw), collapse = ""),
-"\r", base::paste(rep.int(char, nb), collapse = ""),
-sep = "", file = file)
-utils::flush.console()
-}
-.nb <<- nb
-}
-up3 <- function(value, calledOnCreation = F) {
-timenow <- proc.time()[["elapsed"]]
-if (!calledOnCreation && .firstUpdate) {
-.time0 <<- timenow
-.timenow <<- timenow
-.firstUpdate <<- F
-}
-if (!is.finite(value) || value < min || value > max)
-return()
-.val <<- value
-nb <- round(width * (value - min)/(max - min))
-pc <- round(100 * (value - min)/(max - min))
-if (nb == .nb && pc == .pc && timenow - .timenow < 1)
-return()
-.timenow <<- timenow
-span <- timenow - .time0
-timeXiter <- span/(.val - min)
-ETA <- (max - .val) * timeXiter
-ETAstr <- formatTime(ETA)
-cat(base::paste(c("\r  |", rep.int(" ", nw * width + 6)),
-collapse = ""), file = file)
-cat(base::paste(c("\r  |", rep.int(char, nb), rep.int(" ",
-nw * (width - nb)), sprintf("| %3d%%", pc), ", ETA ",
-ETAstr), collapse = ""), file = file)
-utils::flush.console()
-.nb <<- nb
-.pc <<- pc
-}
-getVal <- function() .val
-kill <- function() if (!.killed) {
-cat("\n", file = file)
-utils::flush.console()
-.killed <<- TRUE
-}
-up <- switch(style, up1, up2, up3)
-up(initial, T)
-structure(list(getVal = getVal, up = up, kill = kill), class = "txtProgressBar")
-}
-
-unique_proteins <- sort(unique(features$Protein[which(!grepl(";|,",features$Protein))]))
-unique_proteins <- unique_proteins[which(unique_proteins != "")]
-
-LFQ_protein_quant <- base::as.data.frame(matrix(ncol=ncol(features_quant),nrow=length(unique_proteins),0))
-colnames(LFQ_protein_quant) <- colnames(features_quant)
-rownames(LFQ_protein_quant) <- unique_proteins
-
-###Perform LFQ quantification
-cl <- snow::makeCluster(n_cores)#as.numeric(Sys.getenv('NUMBER_OF_PROCESSORS')))
-doSNOW::registerDoSNOW(cl)
-iterations <- nrow(LFQ_protein_quant)
-progress <- function(n) utils::setTxtProgressBar(pb, n)
-opts <- list(progress = progress)
-start <- Sys.time()
-print(base::paste(label," (",Sys.time(),")",sep=""))
-pb <- txtProgressBar(max = iterations, style = 3)
-res_LFQ <- foreach::foreach(i=1:nrow(LFQ_protein_quant),.options.snow = opts) %dopar%
-{
-sel <- which(features$Protein == unique_proteins[i])
-testdat = features_quant[sel,]
-if(nrow(testdat) > TopN) ###if more than 5 peptides are available select TopN peptides according to intensity over all samples (select highest abundant peptides as quantifications are more accurate)
-{
-total_abundance <- rowSums(testdat,na.rm=T)
-testdat <- testdat[order(total_abundance,decreasing = T)[1:TopN],]
-}
-if(nrow(testdat) >= 2)
-{
-res <- calculate_LFQ(peptide_quant_data = testdat,min_num_ratios = 2,num_ratio_samples=num_ratio_samples)
-}else
-{
-res <- as.numeric(rep(NA,ncol(features_quant)))
-names(res) <- base::paste("V",1:length(res),sep="")
-}
-
-return(res)
-}
-snow::stopCluster(cl)
-close(pb)
-
-#Combine results
-for(i in 1:length(res_LFQ))
-{
-if(length(res_LFQ[[i]])>0)
-{
-data.table::set(LFQ_protein_quant,as.integer(i),as.integer(1:ncol(LFQ_protein_quant)),as.list(as.numeric(res_LFQ[[i]])))
-}
-}
-#add information about number of quant features per protein
-count_quant_features <- plyr::count(features$Protein[which(!grepl(";|\\||,",features$Protein))])
-
-LFQ_protein_quant <- base::data.frame(num_quant_features=count_quant_features$freq[match(rownames(LFQ_protein_quant),count_quant_features$x)],LFQ_protein_quant)
-
-end <- Sys.time()
-print(base::paste("Finished LFQ-quantification (",Sys.time(),")",sep=""))
-print(end - start)
-#replace 0 by NA
-LFQ_protein_quant[LFQ_protein_quant==0] <- NA
-
-return(LFQ_protein_quant)
-}
-
-if(ncol(feat_w_backgr_int) <= 10)num_ratio_samples <- NA
-if(ncol(feat_w_backgr_int) > 10)num_ratio_samples <- 6
-
-if(calc_peptide_LFQ == F)
-{
-LFQ_quant_with_background <- LFQ_protein_quant_process(features,feat_w_backgr_int,n_cores,label="Perform LFQ-quantification for non-imputed data",num_ratio_samples = num_ratio_samples)
-LFQ_quant_with_background_imputed <- LFQ_protein_quant_process(features,feat_w_backgr_int_imputed,n_cores,label="Perform LFQ-quantification for imputed data",num_ratio_samples = num_ratio_samples)
-}else ###Use peptide LFQ for calcualting protein LFQ
-{
-LFQ_quant_with_background <- LFQ_protein_quant_process(LFQ_peptide_quant_with_background[,c(1:4)],LFQ_peptide_quant_with_background[,c(5:ncol(LFQ_peptide_quant_with_background))],n_cores,label="Perform LFQ-quantification for non-imputed data",num_ratio_samples = num_ratio_samples)
-LFQ_quant_with_background_imputed <- LFQ_protein_quant_process(LFQ_peptide_quant_with_background_imputed[,c(1:4)],LFQ_peptide_quant_with_background_imputed[,c(5:ncol(LFQ_peptide_quant_with_background_imputed))],n_cores,label="Perform LFQ-quantification for imputed data",num_ratio_samples = num_ratio_samples)
-}
-}
-
-#Perform Top3 and Total quantification
-cl <- parallel::makeCluster(ifelse(n_cores < 4,n_cores,4))#as.numeric(Sys.getenv('NUMBER_OF_PROCESSORS')))
-doParallel::registerDoParallel(cl)
-res <- foreach::foreach(i=1:4) %dopar%
-{
-if(i == 1)
-{
-###Perform Top3 protein quantification
-res <- Top3_Protein_Quant(features = features,feature_sample_matrix_requantified = feat_w_backgr_int,Quant_pvals=pval_sig_w_bckgrnd_quant,S2B=S2B,Alignment_scores = align_scores_peaks_correct,use_overlapping = T,min_peps = 1)
-}
-if(i == 2)
-{
-###Perform Total protein quantification
-res <- Total_Protein_Quant(features = features,feature_sample_matrix_requantified = feat_w_backgr_int,Quant_pvals=pval_sig_w_bckgrnd_quant,S2B=S2B,Alignment_scores = align_scores_peaks_correct,use_overlapping = T,min_peps = 1)
-}
-if(i == 3)
-{
-###Perform Top3 protein quantification for imputed data
-res <- Top3_Protein_Quant(features = features,feature_sample_matrix_requantified = feat_w_backgr_int_imputed,Quant_pvals=pval_sig_w_bckgrnd_quant,Alignment_scores = align_scores_peaks_correct,S2B=S2B,use_overlapping = T,min_peps = 1)
-}
-if(i == 4)
-{
-###Perform Total protein quantification for imputed data
-res <- Total_Protein_Quant(features = features,feature_sample_matrix_requantified = feat_w_backgr_int_imputed,Quant_pvals=pval_sig_w_bckgrnd_quant,Alignment_scores = align_scores_peaks_correct,S2B=S2B,use_overlapping = T,min_peps = 1)
-}
-return(res)
-}
-parallel::stopCluster(cl)
-
-Top3_quant_with_background <- res[[1]]
-Total_quant_with_background <- res[[2]]
-Top3_quant_with_background_imputed <- res[[3]]
-Total_quant_with_background_imputed <- res[[4]]
-
-###Match Gene names to Uniprot Identifier
-if(any(colnames(MaxQ_protein_groups) == "Gene.names") & any(colnames(MaxQ_protein_groups) == "Protein.IDs"))
-{
-temp <- MaxQ_protein_groups[,c("Gene.names","Protein.IDs")]
-temp <- temp[which(temp$Gene.names != ""),]
-
-UniProt_to_GeneName <- base::data.frame(UniProt_ID=unique(as.character(stringr::str_split(temp$Protein.IDs,";",simplify = T))),Gene_Name="")
-UniProt_to_GeneName$Gene_Name <- as.character(UniProt_to_GeneName$Gene_Name)
-
-for(i in 1:nrow(UniProt_to_GeneName))
-{
-UniProt_to_GeneName$Gene_Name[i] <- as.character(temp$Gene.names[which(grepl(UniProt_to_GeneName$UniProt_ID[i],temp$Protein.IDs))])
-}
-
-Top3_quant_with_background <- base::data.frame(Gene_Name=UniProt_to_GeneName$Gene_Name[match(rownames(Top3_quant_with_background),UniProt_to_GeneName$UniProt_ID)],UniProt_Identifier=rownames(Top3_quant_with_background),Top3_quant_with_background)
-rownames(Top3_quant_with_background) <- c()
-
-Total_quant_with_background <- base::data.frame(Gene_Name=UniProt_to_GeneName$Gene_Name[match(rownames(Total_quant_with_background),UniProt_to_GeneName$UniProt_ID)],UniProt_Identifier=rownames(Total_quant_with_background),Total_quant_with_background)
-rownames(Total_quant_with_background) <- c()
-
-Top3_quant_with_background_imputed <- base::data.frame(Gene_Name=UniProt_to_GeneName$Gene_Name[match(rownames(Top3_quant_with_background_imputed),UniProt_to_GeneName$UniProt_ID)],UniProt_Identifier=rownames(Top3_quant_with_background_imputed),Top3_quant_with_background_imputed)
-rownames(Top3_quant_with_background_imputed) <- c()
-
-Total_quant_with_background_imputed <- base::data.frame(Gene_Name=UniProt_to_GeneName$Gene_Name[match(rownames(Total_quant_with_background_imputed),UniProt_to_GeneName$UniProt_ID)],UniProt_Identifier=rownames(Total_quant_with_background_imputed),Total_quant_with_background_imputed)
-rownames(Total_quant_with_background_imputed) <- c()
-
-if(calc_peptide_LFQ == T)
-{
-LFQ_peptide_quant_with_background <- base::data.frame(Gene_Name=UniProt_to_GeneName$Gene_Name[match(LFQ_peptide_quant_with_background$Protein,UniProt_to_GeneName$UniProt_ID)],UniProt_Identifier=LFQ_peptide_quant_with_background$Protein,LFQ_peptide_quant_with_background[,c(1,2,4,5:ncol(LFQ_peptide_quant_with_background))])
-rownames(LFQ_peptide_quant_with_background) <- c()
-colnames(LFQ_peptide_quant_with_background) <- base::gsub("^X","",colnames(LFQ_peptide_quant_with_background))
-
-LFQ_peptide_quant_with_background_imputed <- base::data.frame(Gene_Name=UniProt_to_GeneName$Gene_Name[match(LFQ_peptide_quant_with_background_imputed$Protein,UniProt_to_GeneName$UniProt_ID)],UniProt_Identifier=LFQ_peptide_quant_with_background_imputed$Protein,LFQ_peptide_quant_with_background_imputed[,c(1,2,4,5:ncol(LFQ_peptide_quant_with_background_imputed))])
-rownames(LFQ_peptide_quant_with_background_imputed) <- c()
-colnames(LFQ_peptide_quant_with_background_imputed) <- base::gsub("^X","",colnames(LFQ_peptide_quant_with_background_imputed))
-}
-
-if(calc_protein_LFQ == T)
-{
-LFQ_quant_with_background <- base::data.frame(Gene_Name=UniProt_to_GeneName$Gene_Name[match(rownames(LFQ_quant_with_background),UniProt_to_GeneName$UniProt_ID)],UniProt_Identifier=rownames(LFQ_quant_with_background),LFQ_quant_with_background)
-rownames(LFQ_quant_with_background) <- c()
-colnames(LFQ_quant_with_background) <- base::gsub("^X","",colnames(LFQ_quant_with_background))
-
-LFQ_quant_with_background_imputed <- base::data.frame(Gene_Name=UniProt_to_GeneName$Gene_Name[match(rownames(LFQ_quant_with_background_imputed),UniProt_to_GeneName$UniProt_ID)],UniProt_Identifier=rownames(LFQ_quant_with_background_imputed),LFQ_quant_with_background_imputed)
-rownames(LFQ_quant_with_background_imputed) <- c()
-colnames(LFQ_quant_with_background_imputed) <- base::gsub("^X","",colnames(LFQ_quant_with_background_imputed))
-}
-
-}
-
-if(calc_protein_LFQ == T)
-{
-utils::write.table(x = LFQ_quant_with_background,file = base::paste(path_to_features,"/Proteins_quantification_LFQ",output_file_names_add,".tab",sep=""),row.names = F,sep = "\t")
-utils::write.table(x = LFQ_quant_with_background_imputed,file = base::paste(path_to_features,"/Proteins_quantification_LFQ_imputed",output_file_names_add,".tab",sep=""),row.names = F,sep = "\t")
-}
-utils::write.table(x = Top3_quant_with_background,file = base::paste(path_to_features,"/Proteins_quantification_Top3",output_file_names_add,".tab",sep=""),row.names = F,sep = "\t")
-utils::write.table(x = Top3_quant_with_background_imputed,file = base::paste(path_to_features,"/Proteins_quantification_Top3_imputed",output_file_names_add,".tab",sep=""),row.names = F,sep = "\t")
-utils::write.table(x = Total_quant_with_background,file = base::paste(path_to_features,"/Proteins_quantification_Total",output_file_names_add,".tab",sep=""),row.names = F,sep = "\t")
-utils::write.table(x = Total_quant_with_background_imputed,file = base::paste(path_to_features,"/Proteins_quantification_Total_imputed",output_file_names_add,".tab",sep=""),row.names = F,sep = "\t")
-
-if(calc_peptide_LFQ == T)
-{
-utils::write.table(x = LFQ_peptide_quant_with_background,file = base::paste(path_to_features,"/Peptides_quantification_LFQ",output_file_names_add,".tab",sep=""),row.names = F,sep = "\t")
-utils::write.table(x = LFQ_peptide_quant_with_background_imputed,file = base::paste(path_to_features,"/Peptides_quantification_LFQ_imputed",output_file_names_add,".tab",sep=""),row.names = F,sep = "\t")
-}
-
-print(paste0(Sys.time()," Protein-level aggregation finished"))
-
+Top3_Protein_Quant <- function(features, feat_sample_mat_requant,
+                               Alignment_scores=NULL, Quant_pvals=NULL,
+                               S2B=NULL, use_overlapping=TRUE, min_peps=2,
+                               quant_pvalue_cutoff=0.1, use_isotope_pmps=FALSE){
+    label <- base::paste(round(0 / 1 * 100, 0), "% done")
+    pb <- tcltk::tkProgressBar(title="Prepare Top3 quantification",
+                               label=label, min=0, max=1, width=300)
+    close(pb)
+
+    feat_sample_mat_requant <- base::as.data.frame(feat_sample_mat_requant)
+
+    if(!is.null(Quant_pvals)){
+        Quant_pvals <- base::as.data.frame(Quant_pvals)
+    }
+
+    if(!is.null(Alignment_scores)){
+        Alignment_scores <- base::as.data.frame(Alignment_scores)
+    }
+
+    if(!is.null(S2B)){
+        S2B <- base::as.data.frame(S2B)
+    }
+
+    # Top3 method
+    # Input matrix with samples in cols and rows correspond to unique peptides
+    # (log2 summed intensity over charge state and modification) of a respective
+    # protein
+    Top3_quant <- function(pep_matrix, features_temp,
+                           Alignment_scores_temp=NULL, Quant_pvals_temp=NULL,
+                           S2B_temp=NULL){
+        sequence <- features_temp$Sequence
+
+        if(length(sequence) > 0){
+            pep_matrix <- stats::aggregate(2^pep_matrix,
+                                           by=list(Sequence=sequence),
+                                           FUN=sum, na.rm=TRUE)
+            pep_matrix <- pep_matrix[, -1]
+            pep_matrix[pep_matrix == 0] <- NA
+            pep_matrix <- base::log2(pep_matrix)
+
+            if(!is.null(Alignment_scores_temp)){
+                score_matrix <- stats::aggregate(Alignment_scores_temp,
+                                                 by=list(Sequence=sequence),
+                                                 FUN=mean, na.rm=TRUE)
+                score_matrix <- score_matrix[, -1]
+                score_matrix[score_matrix == 0] <- NA
+            }
+
+            else{
+                score_matrix <- matrix(nrow=nrow(pep_matrix),
+                                       ncol=ncol(pep_matrix), NA)
+                colnames(score_matrix) <- colnames(pep_matrix)
+            }
+
+            if(!is.null(Quant_pvals_temp)){
+                pval_matrix <- stats::aggregate(Quant_pvals_temp,
+                                                by=list(Sequence=sequence),
+                                                FUN=mean, na.rm=TRUE)
+                pval_matrix <- pval_matrix[, -1]
+                pval_matrix[pval_matrix == 0] <- NA
+            }
+
+            else{
+                pval_matrix <- matrix(nrow=nrow(pep_matrix),
+                                      ncol=ncol(pep_matrix), NA)
+                colnames(pval_matrix) <- colnames(pep_matrix)
+            }
+            if(!is.null(S2B_temp)){
+                S2B_matrix <- stats::aggregate(S2B_temp,
+                                               by=list(Sequence=sequence),
+                                               FUN=mean, na.rm=TRUE)
+                S2B_matrix <- S2B_matrix[, -1]
+                S2B_matrix[S2B_matrix == 0] <- NA
+            }
+
+            else{
+                S2B_matrix <- matrix(nrow=nrow(pep_matrix),
+                                     ncol=ncol(pep_matrix), NA)
+                colnames(S2B_matrix) <- colnames(pep_matrix)
+            }
+
+            top3_res <- NULL
+            top3_score_res <- NULL
+            top3_pval_res <- NULL
+            top3_S2B_res <- NULL
+
+            for(c in 1:ncol(pep_matrix)){
+                top3 <- 2^pep_matrix[order(pep_matrix[, c], na.last=TRUE,
+                                           decreasing=TRUE), c][1:3]
+                sums <- sum(top3, na.rm=TRUE)
+
+                if(!is.null(Alignment_scores_temp)){
+                    top3_score <- score_matrix[order(pep_matrix[, c],
+                                                     na.last=TRUE,
+                                                     decreasing=TRUE), c][1:3]
+                    median_score <- stats::median(top3_score, na.rm=TRUE)
+                }
+
+                else{
+                    median_score <- NA
+                }
+
+                if(!is.null(Quant_pvals_temp)){
+                    top3_pval <- pval_matrix[order(pep_matrix[, c],
+                                                   na.last=TRUE,
+                                                   decreasing=TRUE), c][1:3]
+                    median_pval <- stats::median(top3_pval, na.rm=TRUE)
+                }
+
+                else{
+                    median_pval <- NA
+                }
+
+                if(!is.null(S2B_temp)){
+                    top3_S2B <- S2B_matrix[order(pep_matrix[, c], na.last=TRUE,
+                                                 decreasing=TRUE), c][1:3]
+                    median_S2B <- stats::median(top3_S2B, na.rm=TRUE)
+                }
+
+                else{
+                    median_S2B <- NA
+                }
+
+                if(sums == 0){
+                    sums <- NA
+                }
+
+                else{
+                    # Quantification only if at least 2 peptide quantifications
+                    # are available
+                    if(length(which(!is.na(top3))) >= min_peps){
+                        sums <- sums / length(which(!is.na(top3)))
+                    }
+
+                    else{
+                        sums <- NA
+                        median_score <- NA
+                        median_pval <- NA
+                        median_S2B <- NA
+                    }
+                }
+
+                top3_res <- append(top3_res, base::log2(sums))
+                top3_score_res <- append(top3_score_res, median_score)
+                top3_pval_res <- append(top3_pval_res, median_pval)
+                top3_S2B_res <- append(top3_S2B_res, median_S2B)
+            }
+        }
+
+        else{
+            top3_res <- rep(NA, ncol(pep_matrix))
+            top3_score_res <- rep(NA, ncol(score_matrix))
+            top3_pval_res <- rep(NA, ncol(pval_matrix))
+            top3_S2B_res <- rep(NA, ncol(pval_matrix))
+        }
+
+        names(top3_res) <- colnames(pep_matrix)
+        names(top3_score_res) <- base::paste(colnames(score_matrix),
+                                             "_median_score", sep="")
+        names(top3_pval_res) <- base::paste(colnames(pval_matrix),
+                                            "_median_pvals", sep="")
+        names(top3_S2B_res) <- base::paste(colnames(pval_matrix),
+                                           "_median_S2B", sep="")
+
+        return(append(top3_res,
+                      append(top3_score_res,
+                             append(top3_pval_res, top3_S2B_res))))
+    }
+
+    c1 <- features$Protein != ""
+    c2 <- !grepl(";", features$Sequence)
+    c3 <- !grepl("_i|_pmp", features$Feature_name)
+
+    if(use_isotope_pmps == FALSE){
+        loc <- which(c1 & c2 & c3)
+        features_temp <- features[loc, ]
+        feat_sample_mat_requant_temp <- feat_sample_mat_requant[loc, ]
+        Quant_pvals_temp <- Quant_pvals[loc, ]
+        Alignment_scores_temp <- Alignment_scores[loc, ]
+        S2B_temp <- S2B[loc, ]
+    }
+
+    else{
+        loc <- which(c1 & c2)
+        features_temp <- features[loc, ]
+        feat_sample_mat_requant_temp <- feat_sample_mat_requant[loc, ]
+        Quant_pvals_temp <- Quant_pvals[loc, ]
+        Alignment_scores_temp <- Alignment_scores[loc, ]
+        S2B_temp <- S2B[loc, ]
+    }
+
+    if(!is.na(quant_pvalue_cutoff)){
+        rmins <- matrixStats::rowMins(as.matrix(Quant_pvals_temp), na.rm=TRUE)
+        selection <- which(rmins < quant_pvalue_cutoff)
+
+        features_temp <- features[selection, ]
+        feat_sample_mat_requant_temp <- feat_sample_mat_requant[selection, ]
+        Quant_pvals_temp <- Quant_pvals[selection, ]
+        Alignment_scores_temp <- Alignment_scores[selection, ]
+        S2B_temp <- S2B[selection, ]
+    }
+
+    if(nrow(features_temp) > 0){
+        # Use also features where a peptide is shared between 2 or more proteins
+        if(use_overlapping == T){
+            prts <- as.character(stringr::str_split(features_temp$Protein,
+                                                    "\\||;", simplify=TRUE))
+            unique_proteins <- sort(unique(prts))
+        }
+
+        else{
+            prts <- features_temp$Protein[which(!grepl("\\||;",
+                                                       features_temp$Protein))]
+            unique_proteins <- sort(unique(prts))
+        }
+
+        if(any(unique_proteins == "")){
+            unique_proteins <- unique_proteins[-which(unique_proteins == "")]
+        }
+
+        mat <- matrix(ncol=1 + (4 * ncol(feat_sample_mat_requant)),
+                      nrow=length(unique_proteins), 0)
+        protein_TOP3 <- base::as.data.frame(mat)
+        rownames(protein_TOP3) <- unique_proteins
+        mas <- base::paste("median_alignment_score_",
+                           colnames(feat_sample_mat_requant), sep="")
+        mqp <- base::paste("median_quant_pvals_",
+                           colnames(feat_sample_mat_requant), sep="")
+        ms2b <- base::paste("median_S2B_", colnames(feat_sample_mat_requant),
+                            sep="")
+        colnames(protein_TOP3) <- c("num_quant_features",
+                                    colnames(feat_sample_mat_requant),
+                                    mas, mqp, ms2b)
+
+        max <- nrow(protein_TOP3)
+        label <- base::paste(round(0 / max * 100, 0), "% done")
+        pb <- tcltk::tkProgressBar(title="Perform Top3 quantification",
+                                   label=label, min=0, max=max, width=300)
+        start_time <- Sys.time()
+        updatecounter <- 0
+        time_require <- 0
+
+        for(i in 1:length(unique_proteins)){
+            if(use_overlapping == T){
+                ind <- which(grepl(unique_proteins[i], features_temp$Protein))
+            }
+
+            else{
+                ind <- which(features_temp$Protein == unique_proteins[i])
+            }
+
+            if(length(ind) > 0){
+                res <- Top3_quant(
+                    pep_matrix=feat_sample_mat_requant_temp[ind, ],
+                    features_temp=features_temp[ind, ],
+                    Alignment_scores_temp=Alignment_scores[ind, ],
+                    Quant_pvals_temp=Quant_pvals[ind, ],
+                    S2B_temp=S2B_temp[ind, ]
+                )
+                data.table::set(protein_TOP3, as.integer(i),
+                                as.integer(1:ncol(protein_TOP3)),
+                                value=as.list(c(length(ind), as.numeric(res))))
+            }
+
+            else{
+                data.table::set(protein_TOP3, as.integer(i), as.integer(1),
+                                value=0)
+            }
+
+            updatecounter <- updatecounter + 1
+
+            if(updatecounter >= 10){
+                time_elapsed <- difftime(Sys.time(), start_time, units="secs")
+                time_require <- (time_elapsed / (i / max)) * (1 - (i / max))
+                td <- lubridate::seconds_to_period(time_require)
+                time_require <- sprintf('%02d:%02d:%02d', td@hour,
+                                        lubridate::minute(td),
+                                        round(lubridate::second(td), digits=0))
+
+                updatecounter <- 0
+                label <- base::paste(round(i / max * 100, 0), " % done (", i,
+                                     "/", max, ", Time require: ", time_require,
+                                     ")", sep="")
+                tcltk::setTkProgressBar(pb, i, label=label)
+            }
+        }
+
+        close(pb)
+    }
+
+    else{
+        ncols <- 1 + (4 * ncol(feat_sample_mat_requant))
+        protein_TOP3 <- base::as.data.frame(matrix(ncol=ncols, nrow=0, 0))
+        cnames <- c("num_quant_features", colnames(feat_sample_mat_requant),
+                    base::paste("median_alignment_score_",
+                                colnames(feat_sample_mat_requant), sep=""),
+                    base::paste("median_quant_pvals_",
+                                colnames(feat_sample_mat_requant), sep=""),
+                    base::paste("median_S2B_",
+                                colnames(feat_sample_mat_requant), sep=""))
+        colnames(protein_TOP3) <- cnames
+    }
+
+    return(protein_TOP3)
+}
+
+Total_Protein_Quant <- function(features, feat_sample_mat_requant,
+                                Alignment_scores=NULL, Quant_pvals=NULL,
+                                S2B=NULL, use_overlapping=TRUE, min_peps=2,
+                                quant_pvalue_cutoff=0.1,
+                                use_isotope_pmps=FALSE){
+    label <- base::paste(round(0 / 1 * 100, 0), "% done")
+    pb <- tcltk::tkProgressBar(title="Prepare Total quantification",
+                               label=label, min=0, max=1, width=300)
+    close(pb)
+
+    feat_sample_mat_requant <- base::as.data.frame(feat_sample_mat_requant)
+
+    if(!is.null(Quant_pvals)){
+        Quant_pvals <- base::as.data.frame(Quant_pvals)
+    }
+
+    if(!is.null(Alignment_scores)){
+        Alignment_scores <- base::as.data.frame(Alignment_scores)
+    }
+
+    if(!is.null(S2B)){
+        S2B <- base::as.data.frame(S2B)
+    }
+
+    # Total method
+    # Input matrix with samples in cols and rows correspond to unique peptides
+    # (log2 summed intensity over charge state and modification) of a respective
+    # protein
+    Total_quant <- function(pep_matrix, features_temp,
+                            Alignment_scores_temp=NULL, Quant_pvals_temp=NULL,
+                            S2B_temp=NULL, Quant_cutoff=4){
+        sequence <- features_temp$Sequence
+
+        if(length(sequence) > 0){
+            pep_matrix <- stats::aggregate(2^pep_matrix,
+                                           by=list(Sequence=sequence),
+                                           FUN=sum, na.rm=TRUE)
+            pep_matrix <- pep_matrix[, -1]
+            pep_matrix[pep_matrix == 0] <- NA
+            pep_matrix <- base::log2(pep_matrix)
+
+            if(!is.null(Alignment_scores_temp)){
+                score_matrix <- stats::aggregate(Alignment_scores_temp,
+                                                 by=list(Sequence=sequence),
+                                                 FUN=mean, na.rm=TRUE)
+                score_matrix <- score_matrix[, -1]
+                score_matrix[score_matrix == 0] <- NA
+            }
+
+            else{
+                score_matrix <- matrix(nrow=nrow(pep_matrix),
+                                       ncol=ncol(pep_matrix), NA)
+                colnames(score_matrix) <- colnames(pep_matrix)
+            }
+
+            if(!is.null(Quant_pvals_temp)){
+                pval_matrix <- stats::aggregate(Quant_pvals_temp,
+                                                by=list(Sequence=sequence),
+                                                FUN=mean, na.rm=TRUE)
+                pval_matrix <- pval_matrix[, -1]
+                pval_matrix[pval_matrix == 0] <- NA
+            }
+
+            else{
+                pval_matrix <- matrix(nrow=nrow(pep_matrix),
+                                      ncol=ncol(pep_matrix), NA)
+                colnames(pval_matrix) <- colnames(pep_matrix)
+            }
+
+            if(!is.null(S2B_temp)){
+                S2B_matrix <- stats::aggregate(S2B_temp,
+                                               by=list(Sequence=sequence),
+                                               FUN=mean, na.rm=TRUE)
+                S2B_matrix <- S2B_matrix[, -1]
+                S2B_matrix[S2B_matrix == 0] <- NA
+            }
+
+            else{
+                S2B_matrix <- matrix(nrow=nrow(pep_matrix),
+                                     ncol=ncol(pep_matrix), NA)
+                colnames(S2B_matrix) <- colnames(pep_matrix)
+            }
+
+            total_res <- NULL
+            total_score_res <- NULL
+            total_pval_res <- NULL
+            total_S2B_res <- NULL
+
+            for(c in 1:ncol(pep_matrix)){
+                total <- 2^pep_matrix[order(pep_matrix[, c], na.last=TRUE,
+                                            decreasing=TRUE), c]
+                sums <- sum(total, na.rm=TRUE)
+
+                if(!is.null(Alignment_scores_temp)){
+                    total_score <- score_matrix[order(pep_matrix[, c],
+                                                      na.last=TRUE,
+                                                      decreasing=TRUE), c]
+                    median_score <- stats::weighted.mean(total_score,
+                                                         total, na.rm=TRUE)
+                }
+
+                else{
+                    median_score <- NA
+                }
+
+                if(!is.null(Quant_pvals_temp)){
+                    total_pval <- pval_matrix[order(pep_matrix[, c],
+                                                    na.last=TRUE,
+                                                    decreasing=TRUE), c]
+                    median_pval <- stats::weighted.mean(total_pval,total,
+                                                        na.rm=TRUE)
+                }
+
+                else{
+                    median_pval <- NA
+                }
+
+                if(!is.null(S2B_temp)){
+                    total_S2B <- S2B_matrix[order(pep_matrix[, c], na.last=TRUE,
+                                                  decreasing=TRUE), c]
+                    median_S2B <- stats::weighted.mean(total_S2B, total,
+                                                       na.rm=TRUE)
+                }
+
+                else{
+                    median_S2B <- NA
+                }
+
+                if(sums == 0){
+                    sums <- NA
+                }
+
+                else{
+                    # Quantification only if at least n peptide quantifications
+                    # are available
+                    if(length(which(!is.na(total))) >= min_peps){
+                        sums <- sums / length(which(!is.na(total)))
+                    }
+
+                    else{
+                        sums <- NA
+                        median_score <- NA
+                        median_pval <- NA
+                        median_S2B <- NA
+                    }
+                }
+
+                total_res <- append(total_res, base::log2(sums))
+                total_score_res <- append(total_score_res, median_score)
+                total_pval_res <- append(total_pval_res, median_pval)
+                total_S2B_res <- append(total_S2B_res, median_S2B)
+            }
+        }
+
+        else{
+            total_res <- rep(NA, ncol(pep_matrix))
+            total_score_res <- rep(NA, ncol(score_matrix))
+            total_pval_res <- rep(NA, ncol(pval_matrix))
+            total_S2B_res <- rep(NA, ncol(pval_matrix))
+        }
+
+        names(total_res) <- colnames(pep_matrix)
+        names(total_score_res) <- base::paste(colnames(score_matrix),
+                                              "_median_score", sep="")
+        names(total_pval_res) <- base::paste(colnames(pval_matrix),
+                                             "_median_pvals", sep="")
+        names(total_S2B_res) <- base::paste(colnames(pval_matrix),
+                                            "_median_S2B", sep="")
+
+        return(append(total_res,
+                      append(total_score_res,
+                             append(total_pval_res, total_S2B_res))))
+    }
+
+    c1 <- features$Protein != ""
+    c2 <- !grepl(";", features$Sequence)
+    c3 <- !grepl("_i|_pmp", features$Feature_name)
+
+    if(use_isotope_pmps == FALSE){
+        loc <- which(c1 & c2 & c3)
+
+        features_temp <- features[loc, ]
+        feat_sample_mat_requant_temp <- feat_sample_mat_requant[loc, ]
+        Quant_pvals_temp <- Quant_pvals[loc, ]
+        Alignment_scores_temp <- Alignment_scores[loc, ]
+        S2B_temp <- S2B[loc, ]
+    }
+
+    else{
+        loc <- which(c1 & c2)
+
+        features_temp <- features[loc, ]
+        feat_sample_mat_requant_temp <- feat_sample_mat_requant[loc, ]
+        Quant_pvals_temp <- Quant_pvals[loc, ]
+        Alignment_scores_temp <- Alignment_scores[loc, ]
+        S2B_temp <- S2B[loc, ]
+    }
+
+    if(!is.na(quant_pvalue_cutoff)){
+        mns <- matrixStats::rowMins(as.matrix(Quant_pvals_temp), na.rm=TRUE)
+        selection <- which(mns < quant_pvalue_cutoff)
+
+        features_temp <- features[selection, ]
+        feat_sample_mat_requant_temp <- feat_sample_mat_requant[selection, ]
+        Quant_pvals_temp <- Quant_pvals[selection, ]
+        Alignment_scores_temp <- Alignment_scores[selection, ]
+        S2B_temp <- S2B[selection, ]
+    }
+
+    if(nrow(features_temp) > 0){
+        # Use also features where a peptide is shared between 2 or more proteins
+        if(use_overlapping == TRUE){
+            ssplit <- stringr::str_split(features_temp$Protein, "\\||;",
+                                         simplify=TRUE)
+            unique_proteins <- sort(unique(as.character(ssplit)))
+        }
+
+        else{
+            loc <- which(!grepl("\\||;", features_temp$Protein))
+            unique_proteins <- sort(unique(features_temp$Protein[loc]))
+        }
+
+        if(any(unique_proteins == "")){
+            unique_proteins <- unique_proteins[-which(unique_proteins == "")]
+        }
+
+        ncols <- 1 + (4 * ncol(feat_sample_mat_requant))
+        mat <- matrix(ncol=ncols, nrow=length(unique_proteins), 0)
+        protein_total <- base::as.data.frame(mat)
+        rownames(protein_total) <- unique_proteins
+        cnames <- c("num_quant_features", colnames(feat_sample_mat_requant),
+                    base::paste("median_alignment_score_",
+                                colnames(feat_sample_mat_requant), sep=""),
+                    base::paste("median_quant_pvals_",
+                                colnames(feat_sample_mat_requant), sep=""),
+                    base::paste("median_S2B_",
+                                colnames(feat_sample_mat_requant), sep=""))
+        colnames(protein_total) <- cnames
+
+        max <- nrow(protein_total)
+        label <- base::paste(round(0 / max * 100, 0), "% done")
+        pb <- tcltk::tkProgressBar(title="Perform total quantification",
+                                   label=label, min=0, max=max, width=300)
+        start_time <- Sys.time()
+        updatecounter <- 0
+        time_require <- 0
+        for(i in 1:length(unique_proteins)){
+            if(use_overlapping == TRUE){
+                ind <- which(grepl(unique_proteins[i], features_temp$Protein))
+            }
+
+            else{
+                ind <- which(features_temp$Protein == unique_proteins[i])
+            }
+
+            if(length(ind) > 0){
+                res <- Total_quant(
+                    pep_matrix=feat_sample_mat_requant_temp[ind, ],
+                    features_temp=features_temp[ind, ],
+                    Alignment_scores_temp=Alignment_scores[ind, ],
+                    Quant_pvals_temp=Quant_pvals[ind, ],
+                    S2B_temp=S2B_temp[ind, ]
+                )
+                data.table::set(protein_total, as.integer(i),
+                                as.integer(1:ncol(protein_total)),
+                                value=as.list(c(length(ind), as.numeric(res))))
+            }
+
+            else{
+                data.table::set(protein_total, as.integer(i), as.integer(1),
+                                value=0)
+            }
+
+            updatecounter <- updatecounter + 1
+            if(updatecounter >= 10){
+                time_elapsed <- difftime(Sys.time(), start_time,units="secs")
+                time_require <- (time_elapsed / (i / max)) * (1 - (i / max))
+                td <- lubridate::seconds_to_period(time_require)
+                time_require <- sprintf('%02d:%02d:%02d', td@hour,
+                                        lubridate::minute(td),
+                                        round(lubridate::second(td), digits=0))
+
+                updatecounter <- 0
+                label <- base::paste(round(i / max * 100, 0), " % done (", i,
+                                     "/", max, ", Time require: ", time_require,
+                                     ")", sep="")
+                tcltk::setTkProgressBar(pb, i, label=label)
+            }
+        }
+        close(pb)
+    }
+
+    else{
+        ncols <- 1 + (4 * ncol(feat_sample_mat_requant))
+        protein_total <- base::as.data.frame(matrix(ncol=ncols, nrow=0, 0))
+        cnames <- c("num_quant_features", colnames(feat_sample_mat_requant),
+                    base::paste("median_alignment_score_",
+                                colnames(feat_sample_mat_requant), sep=""),
+                    base::paste("median_quant_pvals_",
+                                colnames(feat_sample_mat_requant), sep=""),
+                    base::paste("median_S2B_",
+                                colnames(feat_sample_mat_requant), sep=""))
+        colnames(protein_total) <- cnames
+    }
+
+    return(protein_total)
+}
+
+crap <- gc(FALSE)
+
+# Perform protein level aggregation
+if(!is.null(path_to_MaxQ_output)){
+    print(paste0(Sys.time()," Perform protein-level aggregation"))
+
+    # Load MaxQ peptide results
+    pth <- base::paste(path_to_MaxQ_output, "/peptides.txt", sep="")
+    MaxQ_peptides <- utils::read.table(pth, sep="\t", header=TRUE)
+    loc1 <- which(MaxQ_peptides$Potential.contaminant == "+"
+                 | MaxQ_peptides$Reverse == "+")
+    MaxQ_peptides <- MaxQ_peptides[-loc1,]
+    loc2 <- which(grepl("Intensity\\.", colnames(MaxQ_peptides)))
+    MaxQ_peptides_quant <- MaxQ_peptides[, loc2]
+    MaxQ_peptides_quant[MaxQ_peptides_quant == 0] <- NA
+    MaxQ_peptides_quant <- base::log2(MaxQ_peptides_quant)
+    df <- base::data.frame(Sequence=MaxQ_peptides$Sequence,
+                           Leading_razor=MaxQ_peptides$Leading.razor.protein)
+    MaxQ_peptides_leading_razor <- df
+    lrzr <- as.character(MaxQ_peptides_leading_razor$Leading_razor)
+    MaxQ_peptides_leading_razor$Leading_razor <- lrzr
+    MaxQ_peptides <- base::data.frame(Sequence=MaxQ_peptides$Sequence,
+                                      MaxQ_peptides_quant)
+    pth <- base::paste(path_to_MaxQ_output, "/proteinGroups.txt", sep="")
+    MaxQ_protein_groups <- utils::read.table(pth, sep="\t", header=TRUE)
+
+    # Check if IDs were correctly parsed, if not, try to parse with SwissProt or
+    # Trembl
+    # Not correctly parsed but contains trembl or swissprot fasta headers
+    c1 <- !any(colnames(MaxQ_protein_groups) == "Gene.names")
+    c2 <- any(colnames(MaxQ_protein_groups) == "Protein.IDs")
+    if(c1 & c2){
+        print(paste0(Sys.time(), " Fasta file was not correctly parsed during ",
+                     "search. Try to base::paste fasta headers ..."))
+            print(paste0(Sys.time(), " Detected Swiss-Prot and/or TrEMBL ",
+                         "fasta headers."))
+            if(any(grepl(">sp|>tr", MaxQ_protein_groups$Fasta.headers))){
+            # Protein level
+            # Parsing was not performed correctly so we have to try to do this
+            # here expecting swissprot or trembl fasta headers
+            MaxQ_protein_groups$Gene.names <- ""
+            MaxQ_protein_groups$Organism <- ""
+            pids <- as.character(MaxQ_protein_groups$Protein.IDs)
+            MaxQ_protein_groups$Protein.IDs <- pids
+
+            hdr <- base::gsub(">", "", MaxQ_protein_groups$Fasta.headers)
+            fasta_headers <- stringr::str_split(hdr, "\\|", simplify=TRUE)
+
+            # Extract gene name and species information
+            GN <- vector("character", nrow(MaxQ_protein_groups))
+            ID <- vector("character", nrow(MaxQ_protein_groups))
+            regx <- gregexpr("GN=", MaxQ_protein_groups$Fasta.headers)
+            GN_start <- unlist(lapply(base::paste(regx, sep=","), `[[`, 1))
+            GN_start <- base::gsub("c\\(|\\)", "", GN_start)
+
+            for(i in 1:nrow(MaxQ_protein_groups)){
+                if(GN_start[i] != "-1"){
+                    ssplit <- stringr::str_split(GN_start[i], ",")
+                    indices <- as.numeric(unlist(ssplit)) + 3
+                    sstr <- substring(MaxQ_protein_groups$Fasta.headers[i],
+                                      indices, indices + 10)
+                    stop <- regexpr(" ", sstr)
+                    GN_temp <- substring(MaxQ_protein_groups$Fasta.headers[i],
+                                         indices, indices + stop - 2)
+                    GN[i] <- base::paste(GN_temp, collapse=";")
+                }
+
+                loc <- which(fasta_headers[i, c(2, 4, 6)] != "")
+                header <- fasta_headers[i, c(2, 4, 6)][loc]
+
+                if(length(header) > 0){
+                    ID[i] <- base::paste(header, collapse=";")
+                }
+            }
+
+            pids <- MaxQ_protein_groups$Protein.IDs
+            CON_REV <- !grepl("^CON_|^REV_", MaxQ_protein_groups$Protein.IDs)
+            npids <- ifelse(CON_REV, ID, pids)
+            MaxQ_protein_groups$Protein.IDs <- npids
+            MaxQ_protein_groups$Majority.protein.IDs <- npids
+            MaxQ_protein_groups$Gene.names <- ifelse(CON_REV, GN, "")
+
+            # Peptide level
+            if(any(grepl("\\|", MaxQ_peptides_leading_razor$Leading_razor))){
+                lrzr <- MaxQ_peptides_leading_razor$Leading_razor
+                temp <- stringr::str_split(lrzr, "\\|", simplify=TRUE)
+                res <- ifelse(temp[, 2] != "", temp[, 2], lrzr)
+                MaxQ_peptides_leading_razor$Leading_razor <- res
+            }
+
+            # Requantification features
+            temp <- stringr::str_split(features$Protein, "\\||;", simplify=TRUE)
+            ID <- vector("character", nrow(temp))
+            for(i in 1:nrow(temp)){
+                sel <- which(temp[i, ] == "sp") + 1
+
+                if(length(sel) > 0){
+                    ID[i] <- base::paste(temp[i, sel], collapse=";")
+                }
+
+                else{
+                    sel <- which(temp[i, ] != "")
+                    ID[i] <- base::paste(temp[i, sel], collapse=";")
+                }
+            }
+
+            features$Protein <- ID
+        }
+
+        else{
+            print(paste0(Sys.time(), " No supported fasta headers were ",
+                         "detected. Next steps might be not fully working."))
+        }
+    }
+
+    # Correct for overestimation of high intense features
+    # No correction
+    if(abundance_estimation_correction == FALSE){
+        feat_w_backgr_int <- base::log2(10^feat_w_backgr_int)
+        feat_w_backgr_int_imputed <- base::log2(10^feat_w_backgr_int_imputed)
+    }
+
+    # Correct abundance estimations based on MaxQ peptide abundance estimations
+    else{
+        # Determine abundance correction factors based on MaxQ peptide
+        # intensities and data without imputation
+        cor_res <- correct_intensities(
+            features,
+            feat_sample_mat_requant=feat_w_backgr_int,
+            pval_quant=pval_sig_w_bckgrnd_quant,
+            MaxQ_peptides_quant=MaxQ_peptides,
+            main="Signal_Background_intensity"
+        )
+
+        feat_w_backgr_int <- cor_res[[1]]
+        lst <- list(correction_data=cor_res[[2]], correction_fit=cor_res[[3]],
+                    correction_factor=cor_res[[4]])
+        QC_data[["Abundance_correction"]] <- lst
+
+        cor_res <- correct_intensities(
+            features,
+            feat_sample_mat_requant=feat_w_backgr_int_imputed,
+            pval_quant=pval_sig_w_bckgrnd_quant,
+            MaxQ_peptides_quant=MaxQ_peptides,
+            main="Signal_Background_intensity_imputed",
+            corr_factor=cor_res[[4]]
+        )
+        feat_w_backgr_int_imputed <- cor_res[[1]]
+    }
+
+    # Get leading razor ID per peptide sequence
+    features$Protein <- as.character(features$Protein)
+    features$all_matching_Proteins <- features$Protein
+    loc <- match(features$Sequence, MaxQ_peptides_leading_razor$Sequence)
+    aux1 <- MaxQ_peptides_leading_razor$Leading_razor[loc]
+    features$Protein <- as.character(aux1)
+    aux2 <- features$all_matching_Proteins[is.na(features$Protein)]
+    features$Protein[is.na(features$Protein)] <- aux2
+
+    # Perform peptide level LFQ
+    if(calc_peptide_LFQ == TRUE){
+        LFQ_peptide_quant_process <- function(
+            features,
+            features_quant,
+            n_cores,
+            label="Perform peptide-LFQ-quantification",
+            num_ratio_samples=NA,
+            TopN=5,
+            seed=1
+        ){
+            set.seed(seed)
+            # Prepare for MaxLFQ algorithm
+            calculate_LFQ <- function(peptide_quant_data, min_num_ratios=2,
+                                      num_ratio_samples=NA){
+
+                # Error function which is used to optimize ratios
+                least_square_error <- function(par, ratio_mat){
+                    sum <- 0
+                    vals <- NULL
+
+                    if(ncol(ratio_mat) > 1){
+                        for(c in 1:(ncol(ratio_mat) - 1)){
+                            for(r in (c + 1):nrow(ratio_mat)){
+                                val <- (base::log2(ratio_mat[r, c])
+                                        - base::log2(par[r])
+                                        + base::log2(par[c]))^2
+                                vals <- append(vals, val)
+
+                                if(!is.na(val))
+                                    sum <- sum + val
+                                }
+                            }
+                        }
+                    }
+
+                    if(sum == 0){
+                        sum <- NA
+                    }
+
+                    return(sum)
+                }
+
+                # Unlog intensities
+                peptide_quant_data <- 2^peptide_quant_data
+                # Calculate summed intensities per sample
+                totalsum_per_sample <- colSums(peptide_quant_data, na.rm=TRUE)
+                # Determine median ratio matrix between all samples
+                mat <- matrix(nrow=ncol(peptide_quant_data),
+                              ncol=ncol(peptide_quant_data))
+                ratio_mat <- base::as.data.frame(mat)
+
+                if(ncol(ratio_mat) > 1){
+                    for(c in 1:(ncol(ratio_mat) - 1)){
+                        for(r in (c + 1):nrow(ratio_mat)){
+                            ratios <- (peptide_quant_data[, r]
+                                       / peptide_quant_data[, c])
+
+                            if(length(which(!is.na(ratios))) >= min_num_ratios){
+                                ratio_mat[r, c] <- stats::median(ratios,
+                                                                 na.rm=TRUE)
+                            }
+                        }
+                    }
+                }
+
+                # Calculate ratios over all samples
+                if(is.na(num_ratio_samples)){
+                    # Define start parameter
+                    start_par <- c(rep(1, ncol(ratio_mat)))
+                    # Now find optimum in ratios to best recover true observed ratios between samples
+                    res_ratio <- NULL
+                    try(res_ratio <- stats::optim(par=start_par,
+                                                  fn=least_square_error,
+                                                  ratio_mat=ratio_mat,
+                                                  lower=1, upper=100,
+                                                  method="L-BFGS-B"),
+                        silent=TRUE)
+
+                    if(!is.null(res_ratio)){
+                        # Normalize ratios to sample with highest intensity
+                        mx <- max(totalsum_per_sample)
+                        loc <- which(totalsum_per_sample == mx)
+                        ratio_norm <- res_ratio$par / res_ratio$par[loc]
+                        # Finally calculate log2 lfq protein intensities per
+                        # sample
+                        lfq <- base::log2(ratio_norm * totalsum_per_sample[loc])
+                        # Remove quant values for samples were no ratios were
+                        # available
+                        c1 <- colSums(!is.na(ratio_mat)) == 0
+                        c2 <- rowSums(!is.na(ratio_mat)) == 0
+
+                        if(any(c1 & c2)){
+                            sel <- as.numeric(which(c1 & c2))
+                            lfq[sel] <- NA
+                        }
+                    }
+
+                    else{
+                        lfq <- rep(NA, ncol(peptide_quant_data))
+                    }
+                }
+
+                # Calculate ratios only for a subset of samples
+                else{
+                    mat <- matrix(nrow=ncol(peptide_quant_data),
+                                  ncol=ncol(peptide_quant_data), 0)
+                    lfq <- base::as.data.frame(mat)
+
+                    for(s in 1:ncol(peptide_quant_data)){
+                        # Randomly select up to 6 other samples from list of
+                        # samples which also contain quantifications
+                        csum <- colSums(peptide_quant_data, na.rm=TRUE)
+                        samples_with_quant <- as.numeric(which(csum > 0))
+                        loc <- which(samples_with_quant != s)
+                        samples_with_quant <- samples_with_quant[loc]
+
+                        if(length(samples_with_quant) > 0){
+                            len <- length(samples_with_quant)
+                            samps_comparison_x_samp <- sample(
+                                samples_with_quant,
+                                ifelse(len > num_ratio_samples,
+                                       num_ratio_samples, len)
+                            )
+                        }
+
+                        else{
+                            samps_comparison_x_samp <- sample(
+                                c(1:ncol(peptide_quant_data))[-i],
+                                size=num_ratio_samples,
+                                replace=FALSE
+                            )
+                        }
+
+                        loc <- c(s, sort(samps_comparison_x_samp))
+                        ratio_mat_temp <- ratio_mat[loc, loc]
+
+                        # To few of selected random samples show an observed
+                        # intensity ratio but protein is quantified in current
+                        # sample
+                        c1 <- length(which(!is.na(ratio_mat_temp))) < 3
+                        c2 <- any(!is.na(peptide_quant_data[, s]))
+
+                        # XXX: Why empty?
+                        if(c1 & c2){
+                            # Randomly select other samples
+                        }
+
+                        totalsum_per_sample_temp <- totalsum_per_sample[loc]
+                        # Define start parameter
+                        start_par <- c(rep(1, ncol(ratio_mat_temp)))
+                        # Now find optimum in ratios to best recover true
+                        # observed ratios between samples
+                        res_ratio <- NULL
+                        try(res_ratio <- stats::optim(par=start_par,
+                                                      fn=least_square_error,
+                                                      ratio_mat=ratio_mat_temp,
+                                                      lower=1, upper=100,
+                                                      method="L-BFGS-B"),
+                            silent=TRUE)
+
+                        if(!is.null(res_ratio)){
+                            # Normalize ratios to sample with highest intensity
+                            mx <- max(totalsum_per_sample_temp, na.rm=TRUE)
+                            loc <- which(totalsum_per_sample_temp == mx)
+                            ratio_norm <- res_ratio$par / res_ratio$par[loc]
+                            # Finally calculate log2 lfq protein intensities per
+                            # sample
+                            prod <- ratio_norm * totalsum_per_sample_temp[loc]
+                            temp_lfq <- base::log2(prod)
+                            val <- as.integer(c(s,
+                                                sort(samps_comparison_x_samp)))
+                            data.table::set(lfq, as.integer(s), val,
+                                            as.list(temp_lfq))
+                        }
+                    }
+
+                    lfq[lfq == 0] <- NA
+                    lfq <- matrixStats::colMedians(as.matrix(lfq), na.rm=TRUE)
+
+                    # Remove quant values for samples were no ratios were
+                    # available
+                    c1 <- colSums(!is.na(ratio_mat)) == 0
+                    c2 <- rowSums(!is.na(ratio_mat)) == 0
+
+                    if(any(c1 & c2)){
+                        sel <- as.numeric(which(c1 & c2))
+                        lfq[sel] <- NA
+                    }
+                }
+
+                return(lfq)
+            }
+
+            # txtProgressBar from package pbarETA (Francesco Napolitano)
+            # License: LGPL-3
+            txtProgressBar <- function(min=0, max=1, initial=0, char="=",
+                                       width=NA, title, label, style=3,
+                                       file=""){
+                formatTime <- function(seconds){
+                    if(seconds == Inf || is.nan(seconds) || is.na(seconds)){
+                        return("NA")
+                    }
+
+                    seconds <- round(seconds)
+                    sXmin <- 60
+                    sXhr <- sXmin * 60
+                    sXday <- sXhr * 24
+                    sXweek <- sXday * 7
+                    sXmonth <- sXweek * 4.22
+                    sXyear <- sXmonth * 12
+                    years <- floor(seconds / sXyear)
+                    seconds <- seconds - years * sXyear
+                    months <- floor(seconds / sXmonth)
+                    seconds <- seconds - months * sXmonth
+                    weeks <- floor(seconds / sXweek)
+                    seconds <- seconds - weeks * sXweek
+                    days <- floor(seconds / sXday)
+                    seconds <- seconds - days * sXday
+                    hours <- floor(seconds / sXhr)
+                    seconds <- seconds - hours * sXhr
+                    minutes <- floor(seconds / sXmin)
+                    seconds <- seconds - minutes * sXmin
+                    ETA <- c(years, months, days, hours, minutes, seconds)
+                    startst <- which(ETA > 0)[1]
+
+                    if(is.na(startst)){
+                        startst <- 6
+                    }
+
+                    starts <- min(startst, 4)
+                    fmtstr <- rep("%02d", length(ETA))[startst:length(ETA)]
+                    fmtstr <- base::paste(fmtstr, collapse=":")
+                    lst <- as.list(c(as.list(fmtstr), ETA[startst:length(ETA)]))
+
+                    return(do.call(sprintf, lst))
+                }
+
+                c1 <- !identical(file, "")
+                c2 <- !(inherits(file, "connection") && isOpen(file))
+
+                if(c1 && c2){
+                    stop("'file' must be \"\" or an open connection object")
+                }
+
+                if(!style %in% 1L:3L){
+                    style <- 1
+                }
+
+                .val <- initial
+                .killed <- FALSE
+                .nb <- 0L
+                .pc <- -1L
+                .time0 <- NA
+                .timenow <- NA
+                .firstUpdate <- T
+                nw <- nchar(char, "w")
+
+                if(is.na(width)){
+                    width <- getOption("width")
+
+                    if(style == 3L){
+                        width <- width - 10L
+                    }
+
+                    width <- trunc(width / nw)
+                }
+
+                if(max <= min){
+                    stop("must have 'max' > 'min'")
+                }
+
+                up1 <- function(value){
+                    if(!is.finite(value) || value < min || value > max){
+                        return()
+                    }
+
+                    .val <<- value
+                    nb <- round(width * (value - min) / (max - min))
+
+                    if(.nb < nb){
+                        cat(base::paste(rep.int(char, nb - .nb), collapse=""),
+                            file=file)
+                        utils::flush.console()
+                    }
+
+                    else if(.nb > nb){
+                        cat("\r", base::paste(rep.int(" ", .nb * nw),
+                                              collapse=""), "\r",
+                            base::paste(rep.int(char, nb), collapse=""), sep="",
+                            file=file)
+                        utils::flush.console()
+                    }
+
+                    .nb <<- nb
+                }
+
+                up2 <- function(value){
+                    if(!is.finite(value) || value < min || value > max){
+                        return()
+                    }
+
+                    .val <<- value
+                    nb <- round(width * (value - min) / (max - min))
+
+                    if(.nb <= nb){
+                        cat("\r", base::paste(rep.int(char, nb), collapse=""),
+                            sep="", file=file)
+                        utils::flush.console()
+                    }
+
+                    else{
+                        cat("\r", base::paste(rep.int(" ", .nb * nw),
+                                              collapse=""), "\r",
+                            base::paste(rep.int(char, nb), collapse=""), sep="",
+                            file=file)
+                        utils::flush.console()
+                    }
+
+                    .nb <<- nb
+                }
+
+                up3 <- function(value, calledOnCreation=FALSE){
+                    timenow <- proc.time()[["elapsed"]]
+
+                    if(!calledOnCreation && .firstUpdate){
+                        .time0 <<- timenow
+                        .timenow <<- timenow
+                        .firstUpdate <<- FALSE
+                    }
+
+                    if(!is.finite(value) || value < min || value > max){
+                        return()
+                    }
+
+                    .val <<- value
+                    nb <- round(width * (value - min) / (max - min))
+                    pc <- round(100 * (value - min) / (max - min))
+
+                    if (nb == .nb && pc == .pc && timenow - .timenow < 1){
+                        return()
+                    }
+
+                    .timenow <<- timenow
+                    span <- timenow - .time0
+                    timeXiter <- span / (.val - min)
+                    ETA <- (max - .val) * timeXiter
+                    ETAstr <- formatTime(ETA)
+                    cat(base::paste(c("\r  |", rep.int(" ", nw * width + 6)),
+                                    collapse = ""), file=file)
+                    cat(base::paste(c("\r  |", rep.int(char, nb),
+                                      rep.int(" ", nw * (width - nb)),
+                                      sprintf("| %3d%%", pc), ", ETA ", ETAstr),
+                                    collapse=""), file=file)
+                    utils::flush.console()
+                    .nb <<- nb
+                    .pc <<- pc
+                }
+
+                getVal <- function(){
+                    .val
+                }
+
+                kill <- function(){
+                    if (!.killed) {
+                        cat("\n", file=file)
+                        utils::flush.console()
+                        .killed <<- TRUE
+                    }
+                }
+
+                up <- switch(style, up1, up2, up3)
+                up(initial, TRUE)
+                structure(list(getVal=getVal, up=up, kill=kill),
+                          class="txtProgressBar")
+            }
+
+            sel <- which(!grepl(";|,", features$Sequence))
+            aux <- base::paste(features$Sequence[sel],
+                               features$Modifications[sel], sep="_")
+            unique_peptides <- sort(unique(aux))
+            rgx <- regexpr("_", unique_peptides)
+            unique_seq <- base::substr(unique_peptides, 1, rgx - 1)
+            unique_mod <- base::substr(unique_peptides, rgx + 1,
+                                       nchar(unique_peptides))
+
+            mat <- matrix(ncol=ncol(features_quant),
+                          nrow=length(unique_peptides), 0)
+            LFQ_peptide_quant <- base::as.data.frame(mat)
+            colnames(LFQ_peptide_quant) <- colnames(features_quant)
+
+            # Perform LFQ quantification
+            cl <- snow::makeCluster(n_cores)
+            doSNOW::registerDoSNOW(cl)
+            iterations <- nrow(LFQ_peptide_quant)
+
+            progress <- function(n){
+                utils::setTxtProgressBar(pb, n)
+            }
+
+            opts <- list(progress=progress)
+            start <- Sys.time()
+            print(base::paste(label, " (", Sys.time(), ")", sep=""))
+            pb <- txtProgressBar(max=iterations, style=3)
+            res_LFQ <- foreach::foreach(i=1:nrow(LFQ_peptide_quant),
+                                        .options.snow=opts) %dopar% {
+                c1 <- features$Sequence == unique_seq[i]
+                c2 <- features$Modifications == unique_mod[i]
+                sel <- which(c1 & c2)
+                testdat = features_quant[sel, ]
+
+                # If more than 5 peptides are available select TopN peptides
+                # according to intensity over all samples (select highest
+                # abundant peptides as quantifications are more accurate)
+                if(nrow(testdat) > TopN){
+                    total_abundance <- rowSums(testdat, na.rm=TRUE)
+                    loc <- order(total_abundance, decreasing=TRUE)[1:TopN]
+                    testdat <- testdat[loc, ]
+                }
+
+                if(nrow(testdat)>1){
+                    res <- calculate_LFQ(peptide_quant_data=testdat,
+                                         min_num_ratios=1,
+                                         num_ratio_samples=num_ratio_samples)
+                }
+
+                else{
+                    res <- as.numeric(testdat)
+                    names(res) <- base::paste("V", 1:length(res), sep="")
+                }
+
+                return(res)
+            }
+
+            snow::stopCluster(cl)
+            close(pb)
+
+            # Combine results
+            for(i in 1:length(res_LFQ)){
+                if(length(res_LFQ[[i]]) > 0){
+                    data.table::set(LFQ_peptide_quant, as.integer(i),
+                                    as.integer(1:ncol(LFQ_peptide_quant)),
+                                    as.list(as.numeric(res_LFQ[[i]])))
+                }
+            }
+
+            # Add information about number of quant features per protein
+            aux <- base::paste(features$Sequence[sel],
+                               features$Modifications[sel], sep="_")
+            count_quant_features <- plyr::count(sort(aux))
+
+            loc <- match(unique_peptides, count_quant_features$x)
+            LFQ_peptide_quant <- base::data.frame(
+                Sequence=unique_seq,
+                Modifications=unique_mod,
+                Protein=features$Protein[match(unique_seq, features$Sequence)],
+                num_quant_features=count_quant_features$freq[loc],
+                LFQ_peptide_quant
+            )
+
+            cnames <- base::gsub("^X", "", colnames(LFQ_peptide_quant))
+            colnames(LFQ_peptide_quant) <- cnames
+
+            end <- Sys.time()
+            print(base::paste("Finished peptide LFQ-quantification (",
+                              Sys.time(), ")", sep=""))
+            print(end - start)
+            # Replace 0 by NA
+            LFQ_peptide_quant[LFQ_peptide_quant == 0] <- NA
+
+            return(LFQ_peptide_quant)
+        }
+
+        if(ncol(feat_w_backgr_int) <= 10){
+            num_ratio_samples <- NA
+        }
+
+        if(ncol(feat_w_backgr_int) > 10){
+            num_ratio_samples <- 6
+        }
+
+        LFQ_peptide_quant_with_background <- LFQ_peptide_quant_process(
+            features,
+            feat_w_backgr_int,
+            n_cores,
+            label="Perform peptide LFQ-quantification for non-imputed data",
+            num_ratio_samples=num_ratio_samples
+        )
+        LFQ_peptide_quant_with_background_imputed <- LFQ_peptide_quant_process(
+            features,
+            feat_w_backgr_int_imputed,
+            n_cores,
+            label="Perform peptide LFQ-quantification for imputed data",
+            num_ratio_samples=num_ratio_samples
+        )
+
+        save(LFQ_peptide_quant_with_background,
+            LFQ_peptide_quant_with_background_imputed,
+            file="Peptide_LFQ_temp.RData")
+    }
+
+    # Perform protein level quantification
+    if(calc_protein_LFQ == TRUE){ # XXX: Having a deja vu
+        # Implementation of the MaxLFQ algorithm. num_ratio_samples indicates
+        # between how many samples the ratio matrices should be determined. If
+        # num_ratio_samples is set to NA it will perform least-square analysis
+        #between all samples. If num_ratio_samples is set to a number < number
+        # of samples least square analysis is performed for randomly picked n
+        # (=num_ratio_samples) samples to reduced computation time
+        LFQ_protein_quant_process <- function(
+            features,
+            features_quant,
+            n_cores,
+            label="Perform LFQ-quantification",
+            num_ratio_samples=NA,
+            TopN=5,
+            seed=1
+        ){
+            set.seed(seed)
+            # Prepare for MaxLFQ algorithm
+            calculate_LFQ <- function(peptide_quant_data, min_num_ratios=2,
+                                      num_ratio_samples=NA){
+                # XXX: AGAIN?
+                # Error function which is used to optimize ratios
+                least_square_error <- function(par, ratio_mat){
+                    sum <- 0
+                    vals <- NULL
+
+                    if(ncol(ratio_mat) > 1){
+                        for(c in 1:(ncol(ratio_mat) - 1)){
+                            for(r in (c + 1):nrow(ratio_mat)){
+                                val <- (base::log2(ratio_mat[r, c])
+                                        - base::log2(par[r])
+                                        + base::log2(par[c]))^2
+                                vals <- append(vals, val)
+
+                                if(!is.na(val)){
+                                    sum <- sum + val
+                                }
+                            }
+                        }
+                    }
+
+                    if(sum == 0){
+                        sum <-  NA
+                    }
+
+                    return(sum)
+                }
+
+                # Unlog intensities
+                peptide_quant_data <- 2^peptide_quant_data
+                # Calculate summed intensities per sample
+                totalsum_per_sample <- colSums(peptide_quant_data, na.rm=TRUE)
+                # Determine median ratio matrix between all samples
+                mat <- matrix(nrow=ncol(peptide_quant_data),
+                              ncol=ncol(peptide_quant_data))
+                ratio_mat <- base::as.data.frame()
+
+                if(ncol(ratio_mat) > 1){
+                    for(c in 1:(ncol(ratio_mat) - 1)){
+                        for(r in (c + 1):nrow(ratio_mat)){
+                            ratios <- (peptide_quant_data[, r]
+                                       / peptide_quant_data[, c])
+
+                            if(length(which(!is.na(ratios))) >= min_num_ratios){
+                                ratio_mat[r, c] <- stats::median(ratios,
+                                                                 na.rm=TRUE)
+                            }
+                        }
+                    }
+                }
+
+                # Calculate ratios over all samples
+                if(is.na(num_ratio_samples)){
+                    # Define start parameter
+                    start_par <- c(rep(1, ncol(ratio_mat)))
+                    # Now find optimum in ratios to best recover true observed
+                    # ratios between samples
+                    res_ratio <- NULL
+                    try(res_ratio <- stats::optim(par=start_par,
+                                                  fn=least_square_error,
+                                                  ratio_mat=ratio_mat, lower=1,
+                                                  upper=100, method="L-BFGS-B"),
+                        silent=TRUE)
+
+                    if(!is.null(res_ratio)){
+                        # Normalize ratios to sample with highest intensity
+                        mx <- max(totalsum_per_sample)
+                        loc <- which(totalsum_per_sample == mx)
+                        ratio_norm <- res_ratio$par / res_ratio$par[loc]
+                        # Finally calculate log2 lfq protein intensities per
+                        # sample
+                        lfq <- base::log2(ratio_norm * totalsum_per_sample[loc])
+                        # Remove quant values for samples were no ratios were
+                        # available
+                        c1 <- colSums(!is.na(ratio_mat)) == 0
+                        c2 <- rowSums(!is.na(ratio_mat)) == 0
+
+                        if(any(c1 & c2)){
+                            sel <- as.numeric(which(c1 & c2)
+                            lfq[sel] <- NA
+                        }
+                    }
+
+                    else{
+                        lfq <- rep(NA, ncol(peptide_quant_data))
+                    }
+                }
+
+                # Calculate ratios only for a subset of samples
+                else{
+                    mat <- matrix(nrow=ncol(peptide_quant_data),
+                                  ncol=ncol(peptide_quant_data), 0)
+                    lfq <- base::as.data.frame(mat)
+
+                    for(s in 1:ncol(peptide_quant_data)){
+                        # Randomly select up to 6 other samples from list of
+                        # samples which also contain quantifications
+                        aux <- which(colSums(peptide_quant_data, na.rm=T) > 0)
+                        samples_with_quant <- as.numeric(aux)
+                        loc <- which(samples_with_quant != s)
+                        samples_with_quant <- samples_with_quant[loc]
+
+                        if(length(samples_with_quant) > 0){
+                            len <- length(samples_with_quant)
+                            samps_comparison_x_samp <- sample(
+                                samples_with_quant,
+                                ifelse(len > num_ratio_samples,
+                                       num_ratio_samples, len)
+                            )
+                        }
+
+                        else{
+                            samps_comparison_x_samp <- sample(
+                                c(1:ncol(peptide_quant_data))[-i],
+                                size=num_ratio_samples,
+                                replace=FALSE
+                            )
+                        }
+
+                        loc <- c(s, sort(samps_comparison_x_samp))
+                        ratio_mat_temp <- ratio_mat[loc, loc]
+                        # To few of selected random samples show an observed
+                        # intensity ratio but protein is quantified in current
+                        # sample
+                        c1 <- length(which(!is.na(ratio_mat_temp))) < 3
+                        c2 <- any(!is.na(peptide_quant_data[, s]))
+
+                        if(c1 & c2){
+                            # Randomly select other samples
+                        }
+
+                        totalsum_per_sample_temp <- totalsum_per_sample[loc]
+                        # Define start parameter
+                        start_par <- c(rep(1, ncol(ratio_mat_temp)))
+                        # Now find optimum in ratios to best recover true
+                        # observed ratios between samples
+                        res_ratio <- NULL
+                        try(res_ratio <- stats::optim(par=start_par,
+                                                      fn=least_square_error,
+                                                      ratio_mat=ratio_mat_temp,
+                                                      lower=1, upper=100,
+                                                      method="L-BFGS-B"),
+                            silent=TRUE)
+
+                        if(!is.null(res_ratio)){
+                            # Normalize ratios to sample with highest intensity
+                            mx <- max(totalsum_per_sample_temp, na.rm=TRUE)
+                            loc <- which(totalsum_per_sample_temp == mx)
+                            ratio_norm <- res_ratio$par / res_ratio$par[loc]
+                            # Finally calculate log2 lfq protein intensities per
+                            # sample
+                            prod <- ratio_norm * totalsum_per_sample_temp[loc]
+                            temp_lfq <- base::log2(prod)
+
+                            val <- as.integer(c(s,
+                                                sort(samps_comparison_x_samp)))
+                            data.table::set(lfq, as.integer(s), val,
+                                            as.list(temp_lfq))
+                        }
+                    }
+
+                    lfq[lfq == 0] <- NA
+                    lfq <- matrixStats::colMedians(as.matrix(lfq), na.rm=TRUE)
+
+                    # Remove quant values for samples were no ratios were
+                    # available
+                    c1 <- colSums(!is.na(ratio_mat)) == 0
+                    c2 <- rowSums(!is.na(ratio_mat)) == 0
+
+                    if(any(c1 & c2)){
+                        sel <- as.numeric(which(c1 & c2))
+                        lfq[sel] <- NA
+                    }
+                }
+
+                return(lfq)
+            }
+
+            # XXX: AGAIN??
+            # txtProgressBar from package pbarETA (Francesco Napolitano)
+            # License: LGPL-3
+            txtProgressBar <- function(min=0, max=1, initial=0, char="=",
+                                       width=NA, title, label, style=3,
+                                       file=""){
+                formatTime <- function(seconds){
+                    if(seconds == Inf || is.nan(seconds) || is.na(seconds)){
+                        return("NA")
+                    }
+
+                    seconds <- round(seconds)
+                    sXmin <- 60
+                    sXhr <- sXmin * 60
+                    sXday <- sXhr * 24
+                    sXweek <- sXday * 7
+                    sXmonth <- sXweek * 4.22
+                    sXyear <- sXmonth * 12
+                    years <- floor(seconds / sXyear)
+                    seconds <- seconds - years * sXyear
+                    months <- floor(seconds / sXmonth)
+                    seconds <- seconds - months * sXmonth
+                    weeks <- floor(seconds / sXweek)
+                    seconds <- seconds - weeks * sXweek
+                    days <- floor(seconds / sXday)
+                    seconds <- seconds - days * sXday
+                    hours <- floor(seconds / sXhr)
+                    seconds <- seconds - hours * sXhr
+                    minutes <- floor(seconds / sXmin)
+                    seconds <- seconds - minutes * sXmin
+                    ETA <- c(years, months, days, hours, minutes, seconds)
+                    startst <- which(ETA > 0)[1]
+
+                    if(is.na(startst)){
+                        startst <- 6
+                    }
+
+                    starts <- min(startst, 4)
+                    fmtstr <- rep("%02d", length(ETA))[startst:length(ETA)]
+                    fmtstr <- base::paste(fmtstr, collapse=":")
+                    lst <- as.list(c(as.list(fmtstr), ETA[startst:length(ETA)]))
+
+                    return(do.call(sprintf, lst))
+                }
+
+                c1 <- !identical(file, "")
+                c2 <- !(inherits(file, "connection") && isOpen(file))
+
+                if(c1 && c2){
+                    stop("'file' must be \"\" or an open connection object")
+                }
+
+                if(!style %in% 1L:3L){
+                    style <- 1
+                }
+
+                .val <- initial
+                .killed <- FALSE
+                .nb <- 0L
+                .pc <- -1L
+                .time0 <- NA
+                .timenow <- NA
+                .firstUpdate <- T
+                nw <- nchar(char, "w")
+
+                if(is.na(width)){
+                    width <- getOption("width")
+
+                    if(style == 3L){
+                        width <- width - 10L
+                    }
+
+                    width <- trunc(width / nw)
+                }
+
+                if(max <= min){
+                    stop("must have 'max' > 'min'")
+                }
+
+                up1 <- function(value){
+                    if(!is.finite(value) || value < min || value > max){
+                        return()
+                    }
+
+                    .val <<- value
+                    nb <- round(width * (value - min) / (max - min))
+
+                    if(.nb < nb){
+                        cat(base::paste(rep.int(char, nb - .nb), collapse=""),
+                            file=file)
+                        utils::flush.console()
+                    }
+
+                    else if(.nb > nb){
+                        cat("\r", base::paste(rep.int(" ", .nb * nw),
+                                              collapse=""), "\r",
+                            base::paste(rep.int(char, nb), collapse=""), sep="",
+                            file=file)
+                        utils::flush.console()
+                    }
+
+                    .nb <<- nb
+                }
+
+                up2 <- function(value){
+                    if(!is.finite(value) || value < min || value > max){
+                        return()
+                    }
+
+                    .val <<- value
+                    nb <- round(width * (value - min) / (max - min))
+
+                    if(.nb <= nb){
+                        cat("\r", base::paste(rep.int(char, nb), collapse=""),
+                            sep="", file=file)
+                        utils::flush.console()
+                    }
+
+                    else{
+                        cat("\r", base::paste(rep.int(" ", .nb * nw),
+                                              collapse=""), "\r",
+                            base::paste(rep.int(char, nb), collapse=""), sep="",
+                            file=file)
+                        utils::flush.console()
+                    }
+
+                    .nb <<- nb
+                }
+
+                up3 <- function(value, calledOnCreation=FALSE){
+                    timenow <- proc.time()[["elapsed"]]
+
+                    if(!calledOnCreation && .firstUpdate){
+                        .time0 <<- timenow
+                        .timenow <<- timenow
+                        .firstUpdate <<- FALSE
+                    }
+
+                    if(!is.finite(value) || value < min || value > max){
+                        return()
+                    }
+
+                    .val <<- value
+                    nb <- round(width * (value - min) / (max - min))
+                    pc <- round(100 * (value - min) / (max - min))
+
+                    if (nb == .nb && pc == .pc && timenow - .timenow < 1){
+                        return()
+                    }
+
+                    .timenow <<- timenow
+                    span <- timenow - .time0
+                    timeXiter <- span / (.val - min)
+                    ETA <- (max - .val) * timeXiter
+                    ETAstr <- formatTime(ETA)
+                    cat(base::paste(c("\r  |", rep.int(" ", nw * width + 6)),
+                                    collapse = ""), file=file)
+                    cat(base::paste(c("\r  |", rep.int(char, nb),
+                                      rep.int(" ", nw * (width - nb)),
+                                      sprintf("| %3d%%", pc), ", ETA ", ETAstr),
+                                    collapse=""), file=file)
+                    utils::flush.console()
+                    .nb <<- nb
+                    .pc <<- pc
+                }
+
+                getVal <- function(){
+                    .val
+                }
+
+                kill <- function(){
+                    if (!.killed) {
+                        cat("\n", file=file)
+                        utils::flush.console()
+                        .killed <<- TRUE
+                    }
+                }
+
+                up <- switch(style, up1, up2, up3)
+                up(initial, TRUE)
+                structure(list(getVal=getVal, up=up, kill=kill),
+                          class="txtProgressBar")
+            }
+
+            loc <- which(!grepl(";|,", features$Protein))
+            unique_proteins <- sort(unique(features$Protein[loc]))
+            unique_proteins <- unique_proteins[which(unique_proteins != "")]
+
+            mat <- matrix(ncol=ncol(features_quant),
+                          nrow=length(unique_proteins), 0)
+            LFQ_protein_quant <- base::as.data.frame(mat)
+            colnames(LFQ_protein_quant) <- colnames(features_quant)
+            rownames(LFQ_protein_quant) <- unique_proteins
+
+            # Perform LFQ quantification
+            cl <- snow::makeCluster(n_cores)
+            doSNOW::registerDoSNOW(cl)
+            iterations <- nrow(LFQ_protein_quant)
+
+            progress <- function(n){
+                utils::setTxtProgressBar(pb, n)
+            }
+
+            opts <- list(progress=progress)
+            start <- Sys.time()
+            print(base::paste(label, " (", Sys.time(), ")", sep=""))
+            pb <- txtProgressBar(max=iterations, style=3)
+            res_LFQ <- foreach::foreach(i=1:nrow(LFQ_protein_quant),
+                                        .options.snow=opts) %dopar% {
+                sel <- which(features$Protein == unique_proteins[i])
+                testdat = features_quant[sel, ]
+
+                # If more than 5 peptides are available select TopN peptides
+                # according to intensity over all samples (select highest
+                # abundant peptides as quantifications are more accurate)
+                if(nrow(testdat) > TopN){
+                    total_abundance <- rowSums(testdat, na.rm=TRUE)
+                    testdat <- testdat[order(total_abundance,
+                                             decreasing=TRUE)[1:TopN], ]
+                }
+
+                if(nrow(testdat) >= 2){
+                    res <- calculate_LFQ(peptide_quant_data=testdat,
+                                         min_num_ratios=2,
+                                         num_ratio_samples=num_ratio_samples)
+                }
+
+                else{
+                    res <- as.numeric(rep(NA, ncol(features_quant)))
+                    names(res) <- base::paste("V", 1:length(res), sep="")
+                }
+
+                return(res)
+            }
+
+            snow::stopCluster(cl)
+            close(pb)
+
+            #Combine results
+            for(i in 1:length(res_LFQ)){
+                if(length(res_LFQ[[i]]) > 0){
+                    data.table::set(LFQ_protein_quant, as.integer(i),
+                                    as.integer(1:ncol(LFQ_protein_quant)),
+                                    s.list(as.numeric(res_LFQ[[i]])))
+                }
+            }
+
+            # Add information about number of quant features per protein
+            loc <- which(!grepl(";|\\||,", features$Protein))
+            count_quant_features <- plyr::count(features$Protein[loc])
+
+            loc <- match(rownames(LFQ_protein_quant), count_quant_features$x)
+            LFQ_protein_quant <- base::data.frame(
+                num_quant_features=count_quant_features$freq[loc],
+                LFQ_protein_quant
+            )
+
+            end <- Sys.time()
+            print(base::paste("Finished LFQ-quantification (", Sys.time(), ")",
+                              sep=""))
+            print(end - start)
+            # Replace 0 by NA
+            LFQ_protein_quant[LFQ_protein_quant == 0] <- NA
+
+            return(LFQ_protein_quant)
+        }
+
+        if(ncol(feat_w_backgr_int) <= 10){
+            num_ratio_samples <- NA
+        }
+
+        if(ncol(feat_w_backgr_int) > 10){
+            num_ratio_samples <- 6
+        }
+
+        if(calc_peptide_LFQ == FALSE){
+            LFQ_quant_with_background <- LFQ_protein_quant_process(
+                features,
+                feat_w_backgr_int,
+                n_cores,
+                label="Perform LFQ-quantification for non-imputed data",
+                num_ratio_samples=num_ratio_samples
+            )
+            LFQ_quant_with_background_imputed <- LFQ_protein_quant_process(
+                features,
+                feat_w_backgr_int_imputed,
+                n_cores,
+                label="Perform LFQ-quantification for imputed data",
+                num_ratio_samples=num_ratio_samples
+            )
+        }
+
+        # Use peptide LFQ for calcualting protein LFQ
+        else{
+            loc1 <- c(5:ncol(LFQ_peptide_quant_with_background))
+            loc2 <- c(5:ncol(LFQ_peptide_quant_with_background_imputed))
+            LFQ_quant_with_background <- LFQ_protein_quant_process(
+                LFQ_peptide_quant_with_background[, c(1:4)],
+                LFQ_peptide_quant_with_background[, loc1],
+                n_cores,
+                label="Perform LFQ-quantification for non-imputed data",
+                num_ratio_samples=num_ratio_samples
+            )
+            LFQ_quant_with_background_imputed <- LFQ_protein_quant_process(
+                LFQ_peptide_quant_with_background_imputed[, c(1:4)],
+                LFQ_peptide_quant_with_background_imputed[, loc2],
+                n_cores,
+                label="Perform LFQ-quantification for imputed data",
+                num_ratio_samples=num_ratio_samples
+            )
+        }
+    }
+
+    # Perform Top3 and Total quantification
+    cl <- parallel::makeCluster(ifelse(n_cores < 4, n_cores, 4))
+    doParallel::registerDoParallel(cl)
+
+    res <- foreach::foreach(i=1:4) %dopar% {
+        if(i == 1){
+            # Perform Top3 protein quantification
+            res <- Top3_Protein_Quant(
+                features=features,
+                feat_sample_mat_requant=feat_w_backgr_int,
+                Quant_pvals=pval_sig_w_bckgrnd_quant,
+                S2B=S2B,
+                Alignment_scores=align_scores_peaks_correct,
+                use_overlapping=TRUE,
+                min_peps=1
+            )
+        }
+
+        if(i == 2){
+            # Perform Total protein quantification
+            res <- Total_Protein_Quant(
+                features=features,
+                feat_sample_mat_requant=feat_w_backgr_int,
+                Quant_pvals=pval_sig_w_bckgrnd_quant,
+                S2B=S2B,
+                Alignment_scores=align_scores_peaks_correct,
+                use_overlapping=TRUE,
+                min_peps=1
+            )
+        }
+
+        if(i == 3){
+            # Perform Top3 protein quantification for imputed data
+            res <- Top3_Protein_Quant(
+                features=features,
+                feat_sample_mat_requant=feat_w_backgr_int_imputed,
+                Quant_pvals=pval_sig_w_bckgrnd_quant,
+                Alignment_scores=align_scores_peaks_correct,
+                S2B=S2B,
+                use_overlapping=TRUE,
+                min_peps=1
+            )
+        }
+
+        if(i == 4){
+            # Perform Total protein quantification for imputed data
+            res <- Total_Protein_Quant(
+                features=features,
+                feat_sample_mat_requant=feat_w_backgr_int_imputed,
+                Quant_pvals=pval_sig_w_bckgrnd_quant,
+                Alignment_scores=align_scores_peaks_correct,
+                S2B=S2B,
+                use_overlapping=T,
+                min_peps=1
+            )
+        }
+
+        return(res)
+    }
+
+    parallel::stopCluster(cl)
+
+    Top3_quant_with_background <- res[[1]]
+    Total_quant_with_background <- res[[2]]
+    Top3_quant_with_background_imputed <- res[[3]]
+    Total_quant_with_background_imputed <- res[[4]]
+
+    # Match Gene names to Uniprot Identifier
+    c1 <- any(colnames(MaxQ_protein_groups) == "Gene.names")
+    c2 <- any(colnames(MaxQ_protein_groups) == "Protein.IDs")
+
+    if(c1 & c2){
+        temp <- MaxQ_protein_groups[, c("Gene.names", "Protein.IDs")]
+        temp <- temp[which(temp$Gene.names != ""), ]
+
+        upid <- unique(as.character(stringr::str_split(temp$Protein.IDs, ";",
+                                                       simplify=TRUE)))
+        UniProt_to_GeneName <- base::data.frame(UniProt_ID=upid, Gene_Name="")
+        gname <- as.character(UniProt_to_GeneName$Gene_Name)
+        UniProt_to_GeneName$Gene_Name <- gname
+
+        for(i in 1:nrow(UniProt_to_GeneName)){
+            gn <- temp$Gene.names[which(grepl(UniProt_to_GeneName$UniProt_ID[i],
+                                              temp$Protein.IDs))]
+            UniProt_to_GeneName$Gene_Name[i] <- as.character(gn)
+        }
+
+        loc <- match(rownames(Top3_quant_with_background),
+                     UniProt_to_GeneName$UniProt_ID)
+        Top3_quant_with_background <- base::data.frame(
+            Gene_Name=UniProt_to_GeneName$Gene_Name[loc],
+            UniProt_Identifier=rownames(Top3_quant_with_background),
+            Top3_quant_with_background
+        )
+        rownames(Top3_quant_with_background) <- c()
+
+        loc <- match(rownames(Total_quant_with_background),
+                     UniProt_to_GeneName$UniProt_ID)
+        Total_quant_with_background <- base::data.frame(
+            Gene_Name=UniProt_to_GeneName$Gene_Name[loc],
+            UniProt_Identifier=rownames(Total_quant_with_background),
+            Total_quant_with_background
+        )
+        rownames(Total_quant_with_background) <- c()
+
+        loc <- match(rownames(Top3_quant_with_background_imputed),
+                     UniProt_to_GeneName$UniProt_ID)
+        Top3_quant_with_background_imputed <- base::data.frame(
+            Gene_Name=UniProt_to_GeneName$Gene_Name[loc],
+            UniProt_Identifier=rownames(Top3_quant_with_background_imputed),
+            Top3_quant_with_background_imputed
+        )
+        rownames(Top3_quant_with_background_imputed) <- c()
+
+        loc <- match(rownames(Total_quant_with_background_imputed),
+                     UniProt_to_GeneName$UniProt_ID)
+        Total_quant_with_background_imputed <- base::data.frame(
+            Gene_Name=UniProt_to_GeneName$Gene_Name[loc],
+            UniProt_Identifier=rownames(Total_quant_with_background_imputed),
+            Total_quant_with_background_imputed
+        )
+        rownames(Total_quant_with_background_imputed) <- c()
+
+        if(calc_peptide_LFQ == TRUE){
+            loc1 <- match(LFQ_peptide_quant_with_background$Protein,
+                          UniProt_to_GeneName$UniProt_ID)
+            loc2 <- c(1, 2, 4, 5:ncol(LFQ_peptide_quant_with_background))
+            LFQ_peptide_quant_with_background <- base::data.frame(
+                Gene_Name=UniProt_to_GeneName$Gene_Name[loc1],
+                UniProt_Identifier=LFQ_peptide_quant_with_background$Protein,
+                LFQ_peptide_quant_with_background[, loc2]
+            )
+            rownames(LFQ_peptide_quant_with_background) <- c()
+            colnames(LFQ_peptide_quant_with_background) <- base::gsub(
+                "^X",
+                "",
+                colnames(LFQ_peptide_quant_with_background)
+            )
+
+            loc1 <- match(LFQ_peptide_quant_with_background_imputed$Protein,
+                          UniProt_to_GeneName$UniProt_ID)
+            loc2 <- c(1, 2, 4,
+                      5:ncol(LFQ_peptide_quant_with_background_imputed))
+            aux <- LFQ_peptide_quant_with_background_imputed$Protein
+            LFQ_peptide_quant_with_background_imputed <- base::data.frame(
+                Gene_Name=UniProt_to_GeneName$Gene_Name[loc1],
+                UniProt_Identifier=aux,
+                LFQ_peptide_quant_with_background_imputed[, loc2]
+            )
+            rownames(LFQ_peptide_quant_with_background_imputed) <- c()
+            colnames(LFQ_peptide_quant_with_background_imputed) <- base::gsub(
+                "^X",
+                "",
+                colnames(LFQ_peptide_quant_with_background_imputed)
+            )
+        }
+
+        if(calc_protein_LFQ == TRUE){
+            loc <- match(rownames(LFQ_quant_with_background),
+                         UniProt_to_GeneName$UniProt_ID)
+            LFQ_quant_with_background <- base::data.frame(
+                Gene_Name=UniProt_to_GeneName$Gene_Name[loc],
+                UniProt_Identifier=rownames(LFQ_quant_with_background),
+                LFQ_quant_with_background
+            )
+            rownames(LFQ_quant_with_background) <- c()
+            colnames(LFQ_quant_with_background) <- base::gsub(
+                "^X",
+                "",
+                colnames(LFQ_quant_with_background)
+            )
+
+            loc <- match(rownames(LFQ_quant_with_background_imputed),
+                         UniProt_to_GeneName$UniProt_ID)
+            LFQ_quant_with_background_imputed <- base::data.frame(
+                Gene_Name=UniProt_to_GeneName$Gene_Name[loc],
+                UniProt_Identifier=rownames(LFQ_quant_with_background_imputed),
+                LFQ_quant_with_background_imputed
+            )
+            rownames(LFQ_quant_with_background_imputed) <- c()
+            colnames(LFQ_quant_with_background_imputed) <- base::gsub(
+                "^X",
+                "",
+                colnames(LFQ_quant_with_background_imputed)
+            )
+        }
+
+    }
+
+    if(calc_protein_LFQ == TRUE){
+        fname <- base::paste(path_to_features, "/Proteins_quantification_LFQ",
+                             output_file_names_add, ".tab", sep="")
+        utils::write.table(x=LFQ_quant_with_background, file=fname,
+                           row.names=FALSE, sep="\t")
+        fname <- base::paste(path_to_features,
+                             "/Proteins_quantification_LFQ_imputed",
+                             output_file_names_add, ".tab", sep="")
+        utils::write.table(x=LFQ_quant_with_background_imputed, file=fname,
+                           row.names=FALSE, sep="\t")
+    }
+
+    fname <- base::paste(path_to_features, "/Proteins_quantification_Top3",
+                         output_file_names_add, ".tab", sep="")
+    utils::write.table(x=Top3_quant_with_background, file=fname,
+                       row.names=FALSE, sep="\t")
+    fname <- base::paste(path_to_features,
+                         "/Proteins_quantification_Top3_imputed",
+                         output_file_names_add, ".tab", sep="")
+    utils::write.table(x=Top3_quant_with_background_imputed, file=fname,
+                       row.names=FALSE, sep="\t")
+    fname <- base::paste(path_to_features, "/Proteins_quantification_Total",
+                         output_file_names_add, ".tab", sep="")
+    utils::write.table(x=Total_quant_with_background, file=fname,
+                       row.names=FALSE, sep="\t")
+    fname <- base::paste(path_to_features,
+                         "/Proteins_quantification_Total_imputed",
+                         output_file_names_add, ".tab", sep="")
+    utils::write.table(x=Total_quant_with_background_imputed, file=fname,
+                       row.names=FALSE, sep="\t")
+
+    if(calc_peptide_LFQ == TRUE){
+        fname <- base::paste(path_to_features, "/Peptides_quantification_LFQ",
+                             output_file_names_add, ".tab", sep="")
+        utils::write.table(x=LFQ_peptide_quant_with_background, file=fname,
+                           row.names=FALSE, sep="\t")
+        fname <- base::paste(path_to_features,
+                             "/Peptides_quantification_LFQ_imputed",
+                             output_file_names_add, ".tab", sep="")
+        utils::write.table(x=LFQ_peptide_quant_with_background_imputed,
+                           file=fname, row.names=FALSE, sep="\t")
+    }
+
+    print(paste0(Sys.time(), " Protein-level aggregation finished"))
 }
 
 setwd(path_to_features)
 
-###finally save feature level quantification
-print(paste0(Sys.time()," Store all results"))
+# Finally save feature level quantification
+print(paste0(Sys.time(), " Store all results"))
+fname <- base::paste(path_to_features, "/Features", output_file_names_add,
+                     ".tab", sep="")
+utils::write.table(x=features, file=fname, row.names=FALSE, sep="\t")
+fname <- base::paste(path_to_features, "/Features_quantification",
+                     output_file_names_add, ".tab", sep="")
+utils::write.table(x=feat_w_backgr_int, file=fname, row.names=TRUE, sep="\t")
+fname <- base::paste(path_to_features, "/Features_quantification_imputed",
+                     output_file_names_add, ".tab", sep="")
+utils::write.table(x=feat_w_backgr_int_imputed, file=fname, row.names=TRUE,
+                   sep="\t")
+fname <- base::paste(path_to_features, "/Features_quantification_pvals",
+                     output_file_names_add, ".tab", sep="")
+utils::write.table(x=pval_sig_w_bckgrnd_quant, file=fname, row.names=TRUE,
+                   sep="\t")
+fname <- base::paste(path_to_features, "/Features_quantification_ioncount",
+                     output_file_names_add, ".tab", sep="")
+utils::write.table(x=Icount_feat_w_bkgr_int, file=fname, row.names=TRUE,
+                   sep="\t")
+fname <- base::paste(path_to_features, "/Features_quantification_S2B",
+                     output_file_names_add, ".tab", sep="")
+utils::write.table(x=S2B, file=fname, row.names=TRUE, sep="\t")
+fname <- base::paste(path_to_features,
+                     "/Features_quantification_variability_score",
+                     output_file_names_add, ".tab", sep="")
+utils::write.table(x=align_var_score, file=fname, row.names=TRUE, sep="\t")
+fname <- base::paste(path_to_features,
+                     "/Features_quantification_alignment_score",
+                     output_file_names_add, ".tab", sep="")
+utils::write.table(x=align_scores_peaks_correct, file=fname, row.names=TRUE,
+                   sep="\t")
+fname <- base::paste(path_to_features,
+                     "/Features_quantification_mono_iso_alignment_score",
+                     output_file_names_add, ".tab", sep="")
+utils::write.table(x=mono_iso_alignment_summary, file=fname, row.names=TRUE,
+                   sep="\t")
 
-utils::write.table(x = features,file = base::paste(path_to_features,"/Features",output_file_names_add,".tab",sep=""),row.names = F,sep = "\t")
-utils::write.table(x = feat_w_backgr_int,file = base::paste(path_to_features,"/Features_quantification",output_file_names_add,".tab",sep=""),row.names = T,sep = "\t")
-utils::write.table(x = feat_w_backgr_int_imputed,file = base::paste(path_to_features,"/Features_quantification_imputed",output_file_names_add,".tab",sep=""),row.names = T,sep = "\t")
-utils::write.table(x = pval_sig_w_bckgrnd_quant,file = base::paste(path_to_features,"/Features_quantification_pvals",output_file_names_add,".tab",sep=""),row.names = T,sep = "\t")
-utils::write.table(x = Icount_feat_w_bkgr_int,file = base::paste(path_to_features,"/Features_quantification_ioncount",output_file_names_add,".tab",sep=""),row.names = T,sep = "\t")
-utils::write.table(x = S2B,file = base::paste(path_to_features,"/Features_quantification_S2B",output_file_names_add,".tab",sep=""),row.names = T,sep = "\t")
-utils::write.table(x = align_var_score,file = base::paste(path_to_features,"/Features_quantification_variability_score",output_file_names_add,".tab",sep=""),row.names = T,sep = "\t")
-utils::write.table(x = align_scores_peaks_correct,file = base::paste(path_to_features,"/Features_quantification_alignment_score",output_file_names_add,".tab",sep=""),row.names = T,sep = "\t")
-utils::write.table(x = mono_iso_alignment_summary,file = base::paste(path_to_features,"/Features_quantification_mono_iso_alignment_score",output_file_names_add,".tab",sep=""),row.names = T,sep = "\t")
-
-save(QC_data,file = base::paste("Temporary_files/Feature_quantification_QC_data.RData",sep=""))
+save(QC_data,
+     file=base::paste("Temporary_files/Feature_quantification_QC_data.RData",
+                      sep=""))
 options(warn=0)
 }
 
