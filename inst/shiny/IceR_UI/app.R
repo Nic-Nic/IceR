@@ -1,4 +1,3 @@
-
 dropdownButton <- function(label="",
                            status=c("default", "primary", "success", "info",
                                     "warning", "danger"), ..., width=NULL){

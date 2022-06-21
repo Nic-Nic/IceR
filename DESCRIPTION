@@ -1,10 +1,10 @@
-Package: IceR
+Package: IceR2
 Type: Package
 Title: Requantification of label-free DDA proteomics data pre-analyzed by MaxQuant.
 Version: 0.9.13
 Author: Mathias Kalxdorf
 Maintainer: Mathias Kalxdorf <mathiaskalxdorf@gmail.com>
-Description: This package allows performing requantification of label-free DDA proteomics data pre-analyzed by MaxQuant. 
+Description: This package allows performing requantification of label-free DDA proteomics data pre-analyzed by MaxQuant.
 License: GPL-3
 Encoding: UTF-8
 LazyData: true
