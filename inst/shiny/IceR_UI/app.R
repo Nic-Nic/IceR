@@ -184,7 +184,6 @@ qc_panel <- fluidPage(
     )
 )
 
-
 # Define UI ----
 ui <- fluidPage(
     tags$style(type="text/css", ".shiny-output-error { visibility: hidden; }",

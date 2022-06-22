@@ -37,8 +37,8 @@ run_msconvert_raw_mzXML <- function(path_to_raw=NULL){
     # Check which raw files still have to be converted
     mzXMLs_available <- list.files(base::paste(path_to_raw, "/mzXML", sep=""))
 
-    c1 <- which(base::gsub("\\.raw", "", raw_files)
-    c2 <- base::gsub("\\.mzXML", "", mzXMLs_available))
+    c1 <- which(base::gsub("\\.raw", "", raw_files))
+    c2 <- base::gsub("\\.mzXML", "", mzXMLs_available)
     files_to_be_converted <- raw_files[c1 %not in% c2]
 
     if(length(files_to_be_converted) > 0){
@@ -1480,7 +1480,7 @@ align_features <- function(path_to_MaxQ_output, path_to_output,
             }
         }
 
-        borders_RT_use_save =<-borders_RT
+        borders_RT_use_save <- borders_RT
 
         if(MassSpec_mode == "Orbitrap"){
             lst <- list(RT_window=borders_RT, mz_window=borders_m.z)
@@ -1803,10 +1803,8 @@ align_features <- function(path_to_MaxQ_output, path_to_output,
                                     end_ind <- nrow(p)
                                 }
 
-                                c1 <- is.na(p[start_ind, 3])
-                                c2 <- !is.na(p[start_ind + 1, 3])
-
-                                if(c1 & c2){
+                                if(is.na(p[start_ind, 3])
+                                   & !is.na(p[start_ind + 1, 3])){
                                     start_ind <- p[start_ind + 1, 3]
                                     end_ind_temp <- p[end_ind, 4]
 
@@ -1820,18 +1818,14 @@ align_features <- function(path_to_MaxQ_output, path_to_output,
                                     }
                                 }
 
-                                c1 <- !is.na(p[start_ind, 3])
-                                c2 <- is.na(p[end_ind, 4])
-
-                                else if(c1 & c2){
+                                else if(!is.na(p[start_ind, 3])
+                                        & is.na(p[end_ind, 4])){
                                     end_ind <- p[start_ind, 4]
                                     start_ind <- p[start_ind, 3]
                                 }
 
-                                c1 <- is.na(p[start_ind, 3])
-                                c2 <- !is.na(p[end_ind, 3])
-
-                                else if(c1 & c2){
+                                else if(is.na(p[start_ind, 3])
+                                        & !is.na(p[end_ind, 3])){
                                     start_ind <- p[end_ind, 3]
                                     end_ind <- p[end_ind, 4]
                                 }
@@ -2193,12 +2187,10 @@ align_features <- function(path_to_MaxQ_output, path_to_output,
                                     end_ind <- nrow(x)
                                 }
 
-                                c1 <- is.na(x[start_ind, 3])
-                                c2 <- !is.na(x[start_ind + 1, 3])
-
                                 # XXX: Double check this since indexes are being
                                 # reassigned on each conditional
-                                if(c1 & c2){
+                                if(is.na(x[start_ind, 3])
+                                   & !is.na(x[start_ind + 1, 3])){
                                     start_ind <- x[start_ind + 1, 3]
                                     end_ind_temp <- x[end_ind, 4]
 
@@ -2212,18 +2204,14 @@ align_features <- function(path_to_MaxQ_output, path_to_output,
                                     }
                                 }
 
-                                c1 <- !is.na(x[start_ind, 3])
-                                c2 <- is.na(x[end_ind, 4])
-
-                                else if(c1 & c2){
+                                else if(!is.na(x[start_ind, 3])
+                                        & is.na(x[end_ind, 4])){
                                     end_ind <- x[start_ind, 4]
                                     start_ind <- x[start_ind, 3]
                                 }
 
-                                c1 <- is.na(x[start_ind, 3])
-                                c2 <- !is.na(x[end_ind, 3])
-
-                                else if(c1 & c2){
+                                else if(is.na(x[start_ind, 3])
+                                        & !is.na(x[end_ind, 3])){
                                     start_ind <- x[end_ind, 3]
                                     end_ind <- x[end_ind, 4]
                                 }
@@ -7050,20 +7038,20 @@ requantify_features <- function(path_to_features, path_to_mzXML=NA,
     # Arrange selected peaks results in a long table
     peaks <- base::data.frame(
         RT=unlist(sapply(peak_quant, function(x){
-            x$Peak_rt_with_background))
-        },
+            x$Peak_rt_with_background
+        })),
         mz=unlist(sapply(peak_quant, function(x){
-            x$Peak_mz_with_background))
-        },
+            x$Peak_mz_with_background
+        })),
         known=unlist(sapply(peak_quant, function(x){
-            x$correct_peak_w_background))
-        },
+            x$correct_peak_w_background
+        })),
         ion_count=unlist(sapply(peak_quant, function(x){
-            x$Icount_feat_w_bkgr_int))
-        },
+            x$Icount_feat_w_bkgr_int
+        })),
         intensity=unlist(sapply(peak_quant, function(x){
-            x$feat_w_backgr_int)
-        })
+            x$feat_w_backgr_int
+        }))
     )
     lens <- length(samples)
     peaks$sample <- rep(sort(rep(samples, nrow(features))), length(peak_quant))
@@ -9188,10 +9176,11 @@ requantify_features <- function(path_to_features, path_to_mzXML=NA,
                         ETAstr <- formatTime(ETA)
                         ri <- rep.int(" ", nw * width + 6)
                         cat(base::paste(c("\r  |", ri), collapse=""), file=file)
-                        sf <- sprintf("| %3d%%", pc), ", ETA ", ETAstr)
+                        sf <- sprintf("| %3d%%", pc)
                         cat(base::paste(c("\r  |", rep.int(char, nb),
                                           rep.int(" ", nw * (width - nb)), sf,
-                                        collapse=""), file=file)
+                                          ", ETA ", ETAstr), collapse=""),
+                            file=file)
                         utils::flush.console()
                         .nb <<- nb
                         .pc <<- pc
@@ -9446,7 +9435,7 @@ requantify_features <- function(path_to_features, path_to_mzXML=NA,
                             c2 <- rowSums(!is.na(ratio_mat)) == 0
 
                             if(any(c1 & c2)){
-                                sel <- as.numeric(which(c1 & c2)
+                                sel <- as.numeric(which(c1 & c2))
                                 lfq[sel] <- NA
                             }
                         }
@@ -10608,7 +10597,8 @@ peak_decision <- function(features_select, peak_quant, samples, s,
                                 # detected in other samples where correct peak
                                 # was known
                                 else{
-                                    data.table::set(features_intensity_sample, i=as.integer(i), j=as.integer(1), value=as.numeric(peak_quant$Standard$features_intensity[i, ..s]))                                    data.table::set(Ioncount_sample,i = as.integer(i),j = as.integer(1),value = as.numeric(peak_quant$Standard$Icount_feat_sample_mat[i,..s]))
+                                    data.table::set(features_intensity_sample, i=as.integer(i), j=as.integer(1), value=as.numeric(peak_quant$Standard$features_intensity[i, ..s]))
+                                    data.table::set(Ioncount_sample, i=as.integer(i), j=as.integer(1), value=as.numeric(peak_quant$Standard$Icount_feat_sample_mat[i, ..s]))
                                     data.table::set(feat_w_bkgrnd_inty_samp, i=as.integer(i), j=as.integer(1), value=as.numeric(peak_quant$Standard$feat_w_backgr_int[i, ..s]))
                                     data.table::set(Icount_w_bkgr_smp, i=as.integer(i), j=as.integer(1), value=as.numeric(peak_quant$Standard$Icount_feat_w_bkgr_int[i, ..s]))
                                     data.table::set(peak_selected_sample, i=as.integer(i), j=as.integer(1), value=as.numeric(length(peak_quant)))
