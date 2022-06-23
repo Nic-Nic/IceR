@@ -6230,6 +6230,7 @@ requantify_features <- function(path_to_features, path_to_mzXML=NA,
     # Now select 1000 decoy features randomly for which we will perform peak
     # selection and quantification
     decoy_features <- which(grepl("_d", features$Feature_name))
+
     if(length(decoy_features) > 1000){
         set.seed(1)
         select_decoys <- sample(decoy_features, 1000)
@@ -7850,12 +7851,12 @@ requantify_features <- function(path_to_features, path_to_mzXML=NA,
     # Calculate fraction of missing values before and after imputation
     total <- nrow(feat_w_backgr_int) * ncol(feat_w_backgr_int)
     missing <- length(which(is.na(as.numeric(as.matrix(feat_w_backgr_int)))))
-    print(base::paste(Sys.time(), "Quantification without imputation: ",
+    print(base::paste(Sys.time(), " Quantification without imputation: ",
                       round(missing / total * 100, digits=1),
                       " % missing values", sep=""))
     aux <- as.numeric(as.matrix(feat_w_backgr_int_imputed))
     missing <- length(which(is.na(aux)))
-    print(base::paste(Sys.time(), "Quantification with imputation: ",
+    print(base::paste(Sys.time(), " Quantification with imputation: ",
                       round(missing / total * 100, digits=1),
                       " % missing values", sep=""))
 

@@ -213,8 +213,6 @@ run_all_processes <- function(settings_list){
         settings_list$MaxQ_output_folder
     )
 
-
-
     path_to_output <- ifelse(endsWith(settings_list$IceR_output, "/"),
                              substr(settings_list$IceR_output, 1,
                                     nchar(settings_list$IceR_output) - 1),
