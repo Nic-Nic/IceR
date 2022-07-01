@@ -9785,12 +9785,12 @@ requantify_features <- function(path_to_features, path_to_mzXML=NA,
                 snow::stopCluster(cl)
                 close(pb)
 
-                #Combine results
+                # Combine results
                 for(i in 1:length(res_LFQ)){
                     if(length(res_LFQ[[i]]) > 0){
                         data.table::set(LFQ_protein_quant, as.integer(i),
                                         as.integer(1:ncol(LFQ_protein_quant)),
-                                        s.list(as.numeric(res_LFQ[[i]])))
+                                        as.list(as.numeric(res_LFQ[[i]])))
                     }
                 }
 
