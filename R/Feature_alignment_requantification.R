@@ -9390,7 +9390,7 @@ requantify_features <- function(path_to_features, path_to_mzXML=NA,
                     # Determine median ratio matrix between all samples
                     mat <- matrix(nrow=ncol(peptide_quant_data),
                                   ncol=ncol(peptide_quant_data))
-                    ratio_mat <- base::as.data.frame()
+                    ratio_mat <- base::as.data.frame(mat)
 
                     if(ncol(ratio_mat) > 1){
                         for(c in 1:(ncol(ratio_mat) - 1)){
